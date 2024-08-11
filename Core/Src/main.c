@@ -32,6 +32,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define LCD_CGRAM_BASE_ADDR	0x40
 #define CMD_LCD_ON_CURSOR 0x0E
 #define CMD_LCD_ON 0x0C
 #define CMD_LCD_CLEAR 0x01
@@ -124,6 +125,16 @@ void LCD_SendString(uint8_t lcd_addr, char *str) {
     }
 }
 
+void LCD_SET_CGRAM(uint8_t lcd_addr, uint8_t addr, uint8_t *data) {
+	uint8_t start_addr = LCD_CGRAM_BASE_ADDR | (addr << 3);
+	LCD_SendCommand(lcd_addr, start_addr);
+	for (int i = 0; i < 8; i++) {
+		LCD_SendData(lcd_addr, data[i]);
+	}
+}
+
+uint8_t custom_char[8] = {0x0,0x0,0xe,0xa,0xe,0x0,0x0};
+
 unsigned char UART_Print_Port = 0; //0 = USB, 1 = LoRa, 2 = GPS
 uint8_t UART1_Rx_Data[1];
 uint8_t UART2_Rx_Data[1];
@@ -203,6 +214,7 @@ int main(void) {
 	setvbuf(stdout, NULL, _IONBF, 0);
 	printf("HELL WORLD\r\n");
 	LCD_Init(LCD_ADDR);
+	LCD_SET_CGRAM(LCD_ADDR, 0x00, custom_char);
 	LCD_SendCommand(LCD_ADDR, CMD_LCD_CLEAR);
 	LCD_SendCommand(LCD_ADDR, CMD_LCD_CURSOR_LINE_1);
 	LCD_SendCommand(LCD_ADDR, CMD_LCD_CURSOR_RIGHT);
@@ -222,7 +234,9 @@ int main(void) {
 	LCD_SendData(LCD_ADDR, 0b10110111);
 	LCD_SendCommand(LCD_ADDR, CMD_LCD_CURSOR_LINE_2);
 	LCD_SendCommand(LCD_ADDR, CMD_LCD_CURSOR_RIGHT);
-	LCD_SendString(LCD_ADDR, "Hell World www");
+	LCD_SendString(LCD_ADDR, "Hell");
+	LCD_SendData(LCD_ADDR, 0);
+	LCD_SendString(LCD_ADDR, "World www");
 	/* USER CODE END 2 */
 
 	/* Infinite loop */
