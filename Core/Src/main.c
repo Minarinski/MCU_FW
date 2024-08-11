@@ -133,7 +133,11 @@ void LCD_SET_CGRAM(uint8_t lcd_addr, uint8_t addr, uint8_t *data) {
 	}
 }
 
-uint8_t custom_char[8] = {0x0,0x0,0xe,0xa,0xe,0x0,0x0};
+uint8_t BNumber[8] = {0x15,0x1d,0x17,0x1d,0x1,0x10,0x1f};
+uint8_t BUp[8] = {0x4,0xe,0x1f,0x0,0x4,0xe,0x1f};
+uint8_t BDown[8] = {0x4,0xe,0x1f,0x0,0x4,0xe,0x1f};
+uint8_t BRight[8] = {0x10,0x18,0x1c,0x1e,0x1c,0x18,0x10};
+uint8_t BLeft[8] = {0x10,0x18,0x1c,0x1e,0x1c,0x18,0x10};
 
 unsigned char UART_Print_Port = 0; //0 = USB, 1 = LoRa, 2 = GPS
 uint8_t UART1_Rx_Data[1];
@@ -214,29 +218,28 @@ int main(void) {
 	setvbuf(stdout, NULL, _IONBF, 0);
 	printf("HELL WORLD\r\n");
 	LCD_Init(LCD_ADDR);
-	LCD_SET_CGRAM(LCD_ADDR, 0x00, custom_char);
+	LCD_SET_CGRAM(LCD_ADDR, 0x00, BNumber);
+	LCD_SET_CGRAM(LCD_ADDR, 0x01, BUp);
+	LCD_SET_CGRAM(LCD_ADDR, 0x02, BDown);
 	LCD_SendCommand(LCD_ADDR, CMD_LCD_CLEAR);
 	LCD_SendCommand(LCD_ADDR, CMD_LCD_CURSOR_LINE_1);
-	LCD_SendCommand(LCD_ADDR, CMD_LCD_CURSOR_RIGHT);
-	LCD_SendData(LCD_ADDR, 0b10100010);
-	LCD_SendData(LCD_ADDR, 0b11010000);
-	LCD_SendData(LCD_ADDR, 0b11000101);
-	LCD_SendData(LCD_ADDR, 0b11011000);
-	LCD_SendData(LCD_ADDR, 0b11011101);
-	LCD_SendData(LCD_ADDR, 0b10111101);
-	LCD_SendData(LCD_ADDR, 0b10110111);
-	LCD_SendData(LCD_ADDR, 0b10110000);
-	LCD_SendData(LCD_ADDR, 0b10100011);
-	LCD_SendData(LCD_ADDR, 0b11000000);
-	LCD_SendData(LCD_ADDR, 0b11011110);
-	LCD_SendData(LCD_ADDR, 0b10110010);
-	LCD_SendData(LCD_ADDR, 0b10111101);
-	LCD_SendData(LCD_ADDR, 0b10110111);
-	LCD_SendCommand(LCD_ADDR, CMD_LCD_CURSOR_LINE_2);
-	LCD_SendCommand(LCD_ADDR, CMD_LCD_CURSOR_RIGHT);
-	LCD_SendString(LCD_ADDR, "Hell");
+	LCD_SendString(LCD_ADDR, "604");
 	LCD_SendData(LCD_ADDR, 0);
-	LCD_SendString(LCD_ADDR, "World www");
+	for (int i = 0; i < 11; i++) {
+		LCD_SendCommand(LCD_ADDR, CMD_LCD_CURSOR_RIGHT);
+	}
+	LCD_SendData(LCD_ADDR, 1);
+	LCD_SendCommand(LCD_ADDR, CMD_LCD_CURSOR_LINE_2);
+	LCD_SendData(LCD_ADDR, 3);
+	LCD_SendString(LCD_ADDR, "43420");
+	LCD_SendData(LCD_ADDR, 3);
+	LCD_SendData(LCD_ADDR, 3);
+	LCD_SendData(LCD_ADDR, 3);
+	LCD_SendString(LCD_ADDR, "43080");
+	for (int i = 0; i < 1; i++) {
+		LCD_SendCommand(LCD_ADDR, CMD_LCD_CURSOR_RIGHT);
+	}
+	LCD_SendData(LCD_ADDR, 1);
 	/* USER CODE END 2 */
 
 	/* Infinite loop */
