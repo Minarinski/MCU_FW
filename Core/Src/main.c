@@ -22,6 +22,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
+#include <string.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -31,7 +32,18 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define CMD_LCD_ON_CURSOR 0x0E
+#define CMD_LCD_ON 0x0C
+#define CMD_LCD_CLEAR 0x01
+#define CMD_LCD_CURSOR_LINE_1 0x80
+#define CMD_LCD_CURSOR_LINE_2 0xC0
+#define CMD_LCD_CURSOR_LEFT 0x10
+#define CMD_LCD_CURSOR_RIGHT 0x14
+#define LCD_ADDR (0x27 << 1)
+#define LCD_PIN_RS    (1 << 0)
+#define LCD_PIN_EN    (1 << 2)
+#define LCD_BACKLIGHT (1 << 3)
+#define LCD_DELAY_MS 5
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -64,7 +76,65 @@ static void MX_USART3_UART_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+HAL_StatusTypeDef LCD_SendInternal(uint8_t lcd_addr, uint8_t data, uint8_t flags) {
+    HAL_StatusTypeDef res;
+    for(;;) {
+        res = HAL_I2C_IsDeviceReady(&hi2c1, lcd_addr, 1, HAL_MAX_DELAY);
+        if(res == HAL_OK)
+            break;
+    }
+
+    uint8_t up = data & 0xF0;
+    uint8_t lo = (data << 4) & 0xF0;
+
+    uint8_t data_arr[4];
+    data_arr[0] = up|flags|LCD_BACKLIGHT|LCD_PIN_EN;
+    data_arr[1] = up|flags|LCD_BACKLIGHT;
+    data_arr[2] = lo|flags|LCD_BACKLIGHT|LCD_PIN_EN;
+    data_arr[3] = lo|flags|LCD_BACKLIGHT;
+
+    res = HAL_I2C_Master_Transmit(&hi2c1, lcd_addr, data_arr, sizeof(data_arr), HAL_MAX_DELAY);
+    HAL_Delay(LCD_DELAY_MS);
+    return res;
+}
+
+void LCD_SendCommand(uint8_t lcd_addr, uint8_t cmd) {
+    LCD_SendInternal(lcd_addr, cmd, 0);
+}
+
+void LCD_SendData(uint8_t lcd_addr, uint8_t data) {
+    LCD_SendInternal(lcd_addr, data, LCD_PIN_RS);
+}
+
+void LCD_Init(uint8_t lcd_addr) {
+    // 4-bit mode, 2 lines, 5x7 format
+    LCD_SendCommand(lcd_addr, 0x30);
+    // display & cursor home (keep this!)
+    LCD_SendCommand(lcd_addr, 0x02);
+    // display on, right shift, underline off, blink off
+    LCD_SendCommand(lcd_addr, CMD_LCD_ON);
+    // clear display (optional here)
+    LCD_SendCommand(lcd_addr, CMD_LCD_CLEAR);
+}
+
+void LCD_SendString(uint8_t lcd_addr, char *str) {
+    while(*str) {
+        LCD_SendData(lcd_addr, (uint8_t)(*str));
+        str++;
+    }
+}
+
 unsigned char UART_Print_Port = 0; //0 = USB, 1 = LoRa, 2 = GPS
+uint8_t UART1_Rx_Data[1];
+uint8_t UART2_Rx_Data[1];
+uint8_t UART3_Rx_Data[1];
+
+uint8_t UART1_Rx_Buffer[20];
+
+uint8_t UART1_Len = 0;
+
+unsigned char UART1_Rx_End = 0;
+
 
 int _write(int file, unsigned char *p, int len) {
 	if (UART_Print_Port == 0) {
@@ -127,7 +197,32 @@ int main(void) {
 	MX_USART2_UART_Init();
 	MX_USART3_UART_Init();
 	/* USER CODE BEGIN 2 */
+	HAL_UART_Receive_IT(&huart1, UART1_Rx_Data, 1);
+	HAL_UART_Receive_IT(&huart2, UART2_Rx_Data, 1);
+	HAL_UART_Receive_IT(&huart3, UART3_Rx_Data, 1);
 	setvbuf(stdout, NULL, _IONBF, 0);
+	printf("HELL WORLD\r\n");
+	LCD_Init(LCD_ADDR);
+	LCD_SendCommand(LCD_ADDR, CMD_LCD_CLEAR);
+	LCD_SendCommand(LCD_ADDR, CMD_LCD_CURSOR_LINE_1);
+	LCD_SendCommand(LCD_ADDR, CMD_LCD_CURSOR_RIGHT);
+	LCD_SendData(LCD_ADDR, 0b10100010);
+	LCD_SendData(LCD_ADDR, 0b11010000);
+	LCD_SendData(LCD_ADDR, 0b11000101);
+	LCD_SendData(LCD_ADDR, 0b11011000);
+	LCD_SendData(LCD_ADDR, 0b11011101);
+	LCD_SendData(LCD_ADDR, 0b10111101);
+	LCD_SendData(LCD_ADDR, 0b10110111);
+	LCD_SendData(LCD_ADDR, 0b10110000);
+	LCD_SendData(LCD_ADDR, 0b10100011);
+	LCD_SendData(LCD_ADDR, 0b11000000);
+	LCD_SendData(LCD_ADDR, 0b11011110);
+	LCD_SendData(LCD_ADDR, 0b10110010);
+	LCD_SendData(LCD_ADDR, 0b10111101);
+	LCD_SendData(LCD_ADDR, 0b10110111);
+	LCD_SendCommand(LCD_ADDR, CMD_LCD_CURSOR_LINE_2);
+	LCD_SendCommand(LCD_ADDR, CMD_LCD_CURSOR_RIGHT);
+	LCD_SendString(LCD_ADDR, "Hell World www");
 	/* USER CODE END 2 */
 
 	/* Infinite loop */
@@ -139,6 +234,13 @@ int main(void) {
 		HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_9); //Debug LED
 		HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_13); //Stop LED
 		HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_14); //GPS LED
+
+		if (UART1_Rx_End) {
+			printf("Echo\r\n");
+			HAL_UART_Transmit(&huart1, UART1_Rx_Buffer, UART1_Len, 2);
+			UART1_Len = 0;
+			UART1_Rx_End = 0;
+		}
 		HAL_Delay(1000);
 		/* USER CODE END WHILE */
 
@@ -374,14 +476,38 @@ static void MX_GPIO_Init(void) {
 /* USER CODE BEGIN 4 */
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
+	static uint8_t UART1_Chk = 0;
 	if (huart->Instance == USART1) {
-		UART_Print_Port = 0;
+		UART1_Rx_End = 0;
+		switch (UART1_Chk) {
+		case 0:
+			if (UART1_Rx_Data[0] == 0x02) {
+				// Rx_Buffer[USART1_len]=UART1_Rx_Data[0];
+				// USART1_len++;
+				UART1_Chk = 1;
+			} else
+				UART1_Chk = 0;
+			break;
+		case 1:
+			if (UART1_Rx_Data[0] == 0x03) {
+				UART1_Rx_End = 1;
+				UART1_Chk = 0;
+			} else {
+				UART1_Rx_Buffer[UART1_Len] = UART1_Rx_Data[0];
+				UART1_Len++;
+			}
+			break;
+		default:
+			UART1_Chk = 0;
+			break;
+		}
+		HAL_UART_Receive_IT(&huart1, UART1_Rx_Data, 1);
 	} else if (huart->Instance == USART2) {
-		UART_Print_Port = 0;
-		printf("UART2 Interrupt");
+		HAL_UART_Transmit(&huart1, UART2_Rx_Data, 1, 2);
+		HAL_UART_Receive_IT(&huart2, UART2_Rx_Data, 1);
 	} else if (huart->Instance == USART3) {
-		UART_Print_Port = 0;
-		printf("UART3 Interrupt");
+		HAL_UART_Transmit(&huart1, UART3_Rx_Data, 1, 2);
+		HAL_UART_Receive_IT(&huart3, UART3_Rx_Data, 1);
 	}
 }
 
