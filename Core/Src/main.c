@@ -250,7 +250,7 @@ int main(void)
 	while (1) {
 		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_11); //LAMP2
 		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_12); //LAMP1
-		HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_8); //BUZZER
+		//HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_8); //BUZZER
 		HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_9); //Debug LED
 		HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_13); //Stop LED
 		HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_14); //GPS LED
@@ -517,15 +517,15 @@ static void MX_GPIO_Init(void)
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	if (GPIO_Pin == GPIO_PIN_5) {
-		printf("pin5\r\n");
+		printf("0x021,10x03\r\n");
 	} else if (GPIO_Pin == GPIO_PIN_6) {
-		printf("pin6\r\n");
+		printf("0x022,10x03\r\n");
 	} else if (GPIO_Pin == GPIO_PIN_7) {
-		printf("pin7\r\n");
+		printf("0x023,10x03\r\n");
 	} else if (GPIO_Pin == GPIO_PIN_0) {
-		printf("pin0\r\n");
+		printf("0x024,10x03\r\n");
 	} else if (GPIO_Pin == GPIO_PIN_1) {
-		printf("pin1\r\n");
+		printf("0x025,10x03\r\n ");
 	}
 }
 
