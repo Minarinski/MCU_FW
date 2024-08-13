@@ -517,15 +517,15 @@ static void MX_GPIO_Init(void)
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	if (GPIO_Pin == GPIO_PIN_5) {
-		printf("0x021,10x03\r\n");
+		printf("0x020,10x03\r\n");
 	} else if (GPIO_Pin == GPIO_PIN_6) {
-		printf("0x022,10x03\r\n");
+		printf("0x021,10x03\r\n");
 	} else if (GPIO_Pin == GPIO_PIN_7) {
-		printf("0x023,10x03\r\n");
+		printf("0x022,10x03\r\n");
 	} else if (GPIO_Pin == GPIO_PIN_0) {
-		printf("0x024,10x03\r\n");
+		printf("0x023,10x03\r\n");
 	} else if (GPIO_Pin == GPIO_PIN_1) {
-		printf("0x025,10x03\r\n ");
+		printf("0x024,10x03\r\n ");
 	}
 }
 
