@@ -156,7 +156,7 @@ void Flash_Write(uint32_t address, uint16_t data) {
     FLASH->CR &= ~FLASH_CR_PG;  // Programming mode 해제
 }
 
-void Flash_Write_Str(uint32_t address, uint8_t* StrData){
+void Flash_Write_StrInt(uint32_t address, uint8_t* StrData){
 	Flash_Unlock();  // 플래시 메모리 언락
 	uint16_t value = (uint16_t)strtol((const char*)StrData, NULL, 10);  // 문자열을 정수로 변환
 	Flash_Write(address, value);  // 정수 값을 플래시 메모리에 저장
@@ -293,35 +293,59 @@ int main(void)
 	LCD_SendData(LCD_ADDR, 1);
 
 	//flash
-	uint32_t flash_address = 0x0800FC00;  // 저장할 플래시 메모리 주소
-	Flash_Erase_Page(flash_address);
+	uint32_t ModeFlashAddress = 0x0800FC00;  // 저장할 플래시 메모리 주소
+	uint32_t DataFlashAddress = ModeFlashAddress + 0x02;  // 저장할 플래시 메모리 주소
+	uint16_t InfoModeFlag = Flash_Read(ModeFlashAddress);
+	Flash_Erase_Page(DataFlashAddress);
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 	while (1) {
-		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_11); //LAMP2
-		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_12); //LAMP1
-		//HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_8); //BUZZER
-		HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_9); //Debug LED
-		HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_13); //Stop LED
-		HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_14); //GPS LED
+//		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_11); //LAMP2
+//		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_12); //LAMP1
+//		//HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_8); //BUZZER
+//		HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_9); //Debug LED
+//		HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_13); //Stop LED
+//		HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_14); //GPS LED
 
-		if (UART1_Rx_End) {
-			printf("Echo\r\n");
-			if(!strcmp(UART1_Rx_Buffer, "121")){
-				Flash_Write_Str(flash_address, UART1_Rx_Buffer);
-				//HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_8);
+		if(InfoModeFlag == 1){
+			printf("InfoMode\r\n");
+			if (UART1_Rx_End) {
+				printf("Echo\r\n");
+				if(!strcmp(UART1_Rx_Buffer, "Data")){
+					Flash_Unlock();  // 플래시 메모리 언락
+					Flash_Write(ModeFlashAddress, 0);  // 정수 값을 플래시 메모리에 저장
+					Flash_Lock();
+				}
+				HAL_UART_Transmit(&huart1, UART1_Rx_Buffer, UART1_Len, 2);
+				for(int i = 0;i<20;i++){
+					UART1_Rx_Buffer[i] = '\0';
+				}
+				UART1_Len = 0;
+				UART1_Rx_End = 0;
 			}
-			HAL_UART_Transmit(&huart1, UART1_Rx_Buffer, UART1_Len, 2);
-			for(int i = 0;i<20;i++){
-				UART1_Rx_Buffer[i] = '\0';
-			}
-			UART1_Len = 0;
-			UART1_Rx_End = 0;
-
+			//Flash_Write_StrInt(DataFlashAddress, UART1_Rx_Buffer);
 		}
+		else{
+			printf("DataMode\r\n");
+			if (UART1_Rx_End) {
+				printf("Echo\r\n");
+				if(!strcmp(UART1_Rx_Buffer, "Info")){
+					Flash_Unlock();  // 플래시 메모리 언락
+					Flash_Write(ModeFlashAddress, 1);  // 정수 값을 플래시 메모리에 저장
+					Flash_Lock();
+				}
+				HAL_UART_Transmit(&huart1, UART1_Rx_Buffer, UART1_Len, 2);
+				for(int i = 0;i<20;i++){
+					UART1_Rx_Buffer[i] = '\0';
+				}
+				UART1_Len = 0;
+				UART1_Rx_End = 0;
+			}
+		}
+
 		HAL_Delay(1000);
     /* USER CODE END WHILE */
 
