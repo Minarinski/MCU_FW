@@ -77,6 +77,7 @@ static void MX_USART3_UART_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+//LCD ============================================
 HAL_StatusTypeDef LCD_SendInternal(uint8_t lcd_addr, uint8_t data, uint8_t flags) {
     HAL_StatusTypeDef res;
     for(;;) {
@@ -131,6 +132,53 @@ void LCD_SET_CGRAM(uint8_t lcd_addr, uint8_t addr, uint8_t *data) {
 	for (int i = 0; i < 8; i++) {
 		LCD_SendData(lcd_addr, data[i]);
 	}
+}
+
+//Flash===========================================================
+void Flash_Unlock(void) {
+    FLASH->KEYR = 0x45670123;  // Key1
+    FLASH->KEYR = 0xCDEF89AB;  // Key2
+}
+
+void Flash_Lock(void) {
+    FLASH->CR |= FLASH_CR_LOCK;
+}
+
+void Flash_Write(uint32_t address, uint16_t data) {
+    while (FLASH->SR & FLASH_SR_BSY);  // Busy flag 체크
+
+    FLASH->CR |= FLASH_CR_PG;  // Programming mode 설정
+
+    *(__IO uint16_t*)address = data;  // 데이터 기록
+
+    while (FLASH->SR & FLASH_SR_BSY);  // Busy flag 체크
+
+    FLASH->CR &= ~FLASH_CR_PG;  // Programming mode 해제
+}
+
+void Flash_Write_Str(uint32_t address, uint8_t* StrData){
+	Flash_Unlock();  // 플래시 메모리 언락
+	uint16_t value = (uint16_t)strtol((const char*)StrData, NULL, 10);  // 문자열을 정수로 변환
+	Flash_Write(address, value);  // 정수 값을 플래시 메모리에 저장
+	Flash_Lock();  // 플래시 메모리 잠금
+}
+
+uint16_t Flash_Read(uint32_t address) {
+    return *(__IO uint16_t*)address;  // 지정된 플래시 메모리 주소에서 데이터 읽기
+}
+
+void Flash_Erase_Page(uint32_t address) {
+    Flash_Unlock();  // 플래시 메모리 언락
+
+    FLASH->CR |= FLASH_CR_PER;   // Page Erase 비트 설정
+    FLASH->AR = address;         // 지울 페이지의 주소 설정
+    FLASH->CR |= FLASH_CR_STRT;  // Erase 시작
+
+    while (FLASH->SR & FLASH_SR_BSY);  // 작업이 완료될 때까지 대기
+
+    FLASH->CR &= ~FLASH_CR_PER;  // Page Erase 비트 해제
+
+    Flash_Lock();  // 플래시 메모리 잠금
 }
 
 uint8_t BNumber[8] = {0x15,0x1d,0x17,0x1d,0x1,0x10,0x1f};
@@ -243,6 +291,11 @@ int main(void)
 		LCD_SendCommand(LCD_ADDR, CMD_LCD_CURSOR_RIGHT);
 	}
 	LCD_SendData(LCD_ADDR, 1);
+
+	//flash
+	uint32_t flash_address = 0x0800FC00;  // 저장할 플래시 메모리 주소
+	Flash_Erase_Page(flash_address);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -257,9 +310,17 @@ int main(void)
 
 		if (UART1_Rx_End) {
 			printf("Echo\r\n");
+			if(!strcmp(UART1_Rx_Buffer, "121")){
+				Flash_Write_Str(flash_address, UART1_Rx_Buffer);
+				//HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_8);
+			}
 			HAL_UART_Transmit(&huart1, UART1_Rx_Buffer, UART1_Len, 2);
+			for(int i = 0;i<20;i++){
+				UART1_Rx_Buffer[i] = '\0';
+			}
 			UART1_Len = 0;
 			UART1_Rx_End = 0;
+
 		}
 		HAL_Delay(1000);
     /* USER CODE END WHILE */
