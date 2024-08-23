@@ -23,6 +23,7 @@
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -335,9 +336,36 @@ uint32_t CallData(uint32_t address){
 char latitude[16];
 char longitude[16];
 
+double convertToDecimalDegrees(const char* coordinate, char type) {
+    int degrees;
+    double minutes;
+    double decimalDegrees;
+
+    if (type == 'L') { // Latitude
+        // 첫 두 자리 (도)
+        degrees = (coordinate[0] - '0') * 10 + (coordinate[1] - '0'); // dd
+        // 나머지 부분 (분)
+        minutes = atof(coordinate + 2); // mm.mmmm
+    } else if (type == 'G') { // Longitude
+        // 첫 세 자리 (도)
+        degrees = (coordinate[0] - '0') * 100 + (coordinate[1] - '0') * 10 + (coordinate[2] - '0'); // ddd
+        // 나머지 부분 (분)
+        minutes = atof(coordinate + 3); // mm.mmmm
+    } else {
+        printf("Invalid type\n");
+        return;
+    }
+
+    // 소수점 부분 계산
+    decimalDegrees = degrees + (minutes / 60.0);
+
+    return decimalDegrees;
+}
+
 void parseGPSData(uint8_t *buffer, uint16_t size) {
 	char *nmeaGGA = NULL;
-
+	double la, lo;
+	//printf("%s", (char*)buffer);
 	// DMA 버퍼?��?�� $GPGGA 문자?��?�� �??��
 	nmeaGGA = strstr((char*) buffer, "GLL");
 	if (nmeaGGA != NULL) {
@@ -354,6 +382,7 @@ void parseGPSData(uint8_t *buffer, uint16_t size) {
 		if (token != NULL) {
 			strncpy(latitude, token, sizeof(latitude) - 1);
 			latitude[sizeof(latitude) - 1] = '\0';
+			la = convertToDecimalDegrees(latitude, 'L');
 		}
 
 		// N/S ?��?��
@@ -364,13 +393,14 @@ void parseGPSData(uint8_t *buffer, uint16_t size) {
 		if (token != NULL) {
 			strncpy(longitude, token, sizeof(longitude) - 1);
 			longitude[sizeof(longitude) - 1] = '\0';
+			lo = convertToDecimalDegrees(longitude, 'G');
 		}
 
 		// E/W ?��?��
 		token = strtok(NULL, ",");
 
 		// ?��?��?�� 결과�? ?��버그 출력
-		printf("\r\nLatitude: %s, Longitude: %s\r\n", latitude, longitude);
+		printf("\r\nLatitude: %.6f, Longitude: %.6f\r\n", la, lo);
 	}
 }
 
@@ -544,6 +574,10 @@ int main(void) {
 	//printf("ModeFlag:%d", InfoModeFlag);
 	if (InfoModeFlag == 1) {
 		DataFlashAddress = CallData(DataFlashAddress);
+		strncpy(data[0].busStopID, "44444", sizeof(data[0].busStopID) - 1);
+		strncpy(data[0].lati, "127.362724", sizeof(data[0].lati) - 1);
+		strncpy(data[0].longi, "36.391382", sizeof(data[0].longi) - 1);
+
 		LCD_Write_Info(data[nowIdx], data[nowIdx+1]);
 	} else if (InfoModeFlag == 0) {
 		LCD_SendCommand(LCD_ADDR, CMD_LCD_CLEAR); //Clear
@@ -579,39 +613,44 @@ int main(void) {
 //		HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_14); //GPS LED
 
 		if (!modeFlag) { //Local Mode
-			if (UART1_Rx_End) {
-				//printf("Echo\r\n");
-				if (!strcmp(UART1_Rx_Buffer, "Input")) {
-					Flash_Erase_Page(ModeFlashAddress);
-					Flash_Unlock();
-					Flash_Write(ModeFlashAddress, (uint8_t)0);
-					Flash_Lock();
-				} else if (!strcmp(UART1_Rx_Buffer, "OutPut")) {
-					Flash_Erase_Page(ModeFlashAddress);
-					Flash_Unlock();
-					Flash_Write(ModeFlashAddress, 1);
-					Flash_Lock();
-				} else if ((!strncmp(UART1_Rx_Buffer, "Data", 4)
-						|| !strncmp(UART1_Rx_Buffer, "data", 4))
-						&& InfoModeFlag == 0) {
-					DataFlashAddress = Flash_Write_Data(DataFlashAddress, UART1_Rx_Buffer);
-					//printf("Data\r\n");
-					printf("N\r\n");
+			while(1){
+				if (UART1_Rx_End) {
+					//printf("Echo\r\n");
+					if (!strcmp(UART1_Rx_Buffer, "Input")) {
+						Flash_Erase_Page(ModeFlashAddress);
+						Flash_Unlock();
+						Flash_Write(ModeFlashAddress, (uint8_t)0);
+						Flash_Lock();
+					} else if (!strcmp(UART1_Rx_Buffer, "OutPut")) {
+						Flash_Erase_Page(ModeFlashAddress);
+						Flash_Unlock();
+						Flash_Write(ModeFlashAddress, 1);
+						Flash_Lock();
+					} else if ((!strncmp(UART1_Rx_Buffer, "Data", 4)
+							|| !strncmp(UART1_Rx_Buffer, "data", 4))
+							&& InfoModeFlag == 0) {
+						DataFlashAddress = Flash_Write_Data(DataFlashAddress, UART1_Rx_Buffer);
+						//printf("Data\r\n");
+						printf("N\r\n");
+					}
+					//HAL_UART_Transmit(&huart1, UART1_Rx_Buffer, UART1_Len, 2);
+					for (int i = 0; i < 50; i++) {
+						UART1_Rx_Buffer[i] = '\0';
+					}
+					UART1_Len = 0;
+					UART1_Rx_End = 0;
 				}
-				//HAL_UART_Transmit(&huart1, UART1_Rx_Buffer, UART1_Len, 2);
-				for (int i = 0; i < 50; i++) {
-					UART1_Rx_Buffer[i] = '\0';
+
+				if (InfoModeFlag){
+					if (dataReceived) {
+						parseGPSData(rxBuffer, RX3_BUFFER_SIZE);
+						dataReceived = 0;
+					}
 				}
-				UART1_Len = 0;
-				UART1_Rx_End = 0;
 			}
 		}
 
-//		if (dataReceived) {
-//			//printf("%s", rxBuffer);
-//			parseGPSData(rxBuffer, RX3_BUFFER_SIZE);
-//			dataReceived = 0;
-//		}
+
 //
 //		LoRa_SendData(data, sizeof(data) - 1);
 //
