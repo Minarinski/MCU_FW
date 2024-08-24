@@ -411,7 +411,7 @@ void parseGPSData(uint8_t *buffer, uint16_t size) {
 		token = strtok(NULL, ",");
 
 		// ?��?��?�� 결과�? ?��버그 출력
-		printf("\r\nLatitude: %.6f, Longitude: %.6f\r\n", la, lo);
+		//printf("\r\nLatitude: %.6f, Longitude: %.6f\r\n", la, lo);
 		CheckGPS(la, lo);
 	}
 }
@@ -421,12 +421,16 @@ int checkGPSCnt = 0;
 void CheckGPS(double nowLati, double nowLongi) {
 	double busStopLati = atof(data[nowIdx].lati);
 	double busStopLongi = atof(data[nowIdx].longi);
-
+	//printf("La : %f, La1 : %f\r\n", busStopLati - 0.00009, busStopLati + 0.00009);
+	//printf("NowLa : %f, NowLo : %f\r\n", nowLati, nowLongi);
+	//printf("First : %d\r\n", nowLati >= (busStopLati - 0.00009)
+	//		&& nowLati <= (busStopLati + 0.00009));
 	if (nowLati >= (busStopLati - 0.00009)
 			&& nowLati <= (busStopLati + 0.00009)) {
 		if (nowLongi >= (busStopLongi - 0.00011)
 				&& nowLongi <= (busStopLongi + 0.00012)) {
 			checkGPSCnt++;
+			//printf("Check!!!!!!!!\r\b");
 		}
 	}
 }
@@ -600,10 +604,11 @@ int main(void) {
 //	Flash_Erase_Page(0x0800E400);
 
 	//printf("ModeFlag:%d", InfoModeFlag);
-	if (InfoModeFlag == 1) {
+	if (InfoModeFlag >= 1) {
+		DataFlashAddress = CallData(DataFlashAddress);
 		strncpy(data[0].busStopID, "44444", sizeof(data[0].busStopID) - 1);
-		strncpy(data[0].lati, "127.362724", sizeof(data[0].lati) - 1);
-		strncpy(data[0].longi, "36.391382", sizeof(data[0].longi) - 1);
+		strncpy(data[0].lati, "36.124406", sizeof(data[0].lati) - 1);
+		strncpy(data[0].longi, "128.095744", sizeof(data[0].longi) - 1);
 
 		//LCD_Write_Info(data[nowIdx], data[nowIdx + 1]);
 	} else if (InfoModeFlag == 0) {
@@ -625,7 +630,7 @@ int main(void) {
 
 
 	//FW===================================================================
-	modeFlag = !HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_15);
+	modeFlag = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_15);
 
 	GPSTick = HAL_GetTick();
 	LoRaTick = HAL_GetTick();
@@ -643,8 +648,8 @@ int main(void) {
 //		HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_14); //GPS LED
 
 		if (!modeFlag) { //Local Mode
-			if (InfoModeFlag == 1){
-				DataFlashAddress = CallData(DataFlashAddress);
+			if (InfoModeFlag >= 1){
+				updateLCD();
 			}
 			while (1) {
 				if (UART1_Rx_End) {
@@ -675,7 +680,7 @@ int main(void) {
 					UART1_Rx_End = 0;
 				}
 
-				if (InfoModeFlag) {
+				if (InfoModeFlag) { //사용모드일때
 					if (dataReceived) {
 						parseGPSData(rxBuffer, RX3_BUFFER_SIZE);
 						dataReceived = 0;
@@ -691,6 +696,7 @@ int main(void) {
 					}
 					if (HAL_GetTick() - GPSTick >= 2000) {
 						GPSTick = HAL_GetTick();
+						printf("CNT : %d\r\n", checkGPSCnt);
 						if (checkGPSCnt >= 4) {
 							nowIdx++;
 							updateLCD();
