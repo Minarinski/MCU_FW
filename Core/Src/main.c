@@ -70,7 +70,7 @@ struct DataFlash {
 	char busStopID[8];
 	char lati[16];
 	char longi[16];
-}data[150];
+} data[150];
 
 int nowIdx = 0;
 /* USER CODE END PV */
@@ -149,7 +149,7 @@ void LCD_SET_CGRAM(uint8_t lcd_addr, uint8_t addr, uint8_t *data) {
 	}
 }
 
-void LCD_Write_Info(struct DataFlash nowData, struct DataFlash nextData){
+void LCD_Write_Info(struct DataFlash nowData, struct DataFlash nextData) {
 	LCD_SendCommand(LCD_ADDR, CMD_LCD_CLEAR); //Clear
 	LCD_SendCommand(LCD_ADDR, CMD_LCD_CURSOR_LINE_1);
 	LCD_SendString(LCD_ADDR, nowData.busRouteno);
@@ -171,8 +171,11 @@ void LCD_Write_Info(struct DataFlash nowData, struct DataFlash nextData){
 	LCD_SendData(LCD_ADDR, 1);
 }
 
-//Flash===========================================================
+void updateLCD() {
+	LCD_Write_Info(data[nowIdx], data[nowIdx + 1]);
+}
 
+//Flash===========================================================
 
 int dataIdx = 0;
 
@@ -206,15 +209,15 @@ void Flash_Write_StrInt(uint32_t address, uint8_t *StrData) {
 	Flash_Lock();  // ?��?��?�� 메모�?? ?���??
 }
 
-uint32_t Flash_Write_Char(uint32_t address, uint8_t CharData){
+uint32_t Flash_Write_Char(uint32_t address, uint8_t CharData) {
 	Flash_Unlock();
 	Flash_Write(address, CharData);
 	Flash_Lock();
-	return address+0x02;
+	return address + 0x02;
 }
 
-uint32_t Flash_Write_Str(uint32_t address, uint8_t *StrData){
-	for(int i = 0;i<strlen((char *)StrData);i++){
+uint32_t Flash_Write_Str(uint32_t address, uint8_t *StrData) {
+	for (int i = 0; i < strlen((char*) StrData); i++) {
 		address = Flash_Write_Char(address, StrData[i]);
 	}
 	//printf("%x\r\n", address);
@@ -228,7 +231,8 @@ uint32_t Flash_Write_Data(uint32_t address, uint8_t *StrData) {
 	if (token[0] == 'D') {
 		token = strtok(NULL, ",");
 		if (token != NULL) {
-			strncpy(data[dataIdx].busNM, token, sizeof(data[dataIdx].busNM) - 1);
+			strncpy(data[dataIdx].busNM, token,
+					sizeof(data[dataIdx].busNM) - 1);
 			data[dataIdx].busNM[sizeof(data[dataIdx].busNM) - 1] = '\0';
 			address = Flash_Write_Str(address, data[dataIdx].busNM);
 			address = Flash_Write_Char(address, ',');
@@ -236,15 +240,18 @@ uint32_t Flash_Write_Data(uint32_t address, uint8_t *StrData) {
 
 		token = strtok(NULL, ",");
 		if (token != NULL) {
-			strncpy(data[dataIdx].busRouteno, token, sizeof(data[dataIdx].busRouteno) - 1);
-			data[dataIdx].busRouteno[sizeof(data[dataIdx].busRouteno) - 1] = '\0';
+			strncpy(data[dataIdx].busRouteno, token,
+					sizeof(data[dataIdx].busRouteno) - 1);
+			data[dataIdx].busRouteno[sizeof(data[dataIdx].busRouteno) - 1] =
+					'\0';
 			address = Flash_Write_Str(address, data[dataIdx].busRouteno);
 			address = Flash_Write_Char(address, ',');
 		}
 
 		token = strtok(NULL, ",");
 		if (token != NULL) {
-			strncpy(data[dataIdx].busStopID, token, sizeof(data[dataIdx].busStopID) - 1);
+			strncpy(data[dataIdx].busStopID, token,
+					sizeof(data[dataIdx].busStopID) - 1);
 			data[dataIdx].busStopID[sizeof(data[dataIdx].busStopID) - 1] = '\0';
 			address = Flash_Write_Str(address, data[dataIdx].busStopID);
 			address = Flash_Write_Char(address, ',');
@@ -260,14 +267,15 @@ uint32_t Flash_Write_Data(uint32_t address, uint8_t *StrData) {
 
 		token = strtok(NULL, ",");
 		if (token != NULL) {
-			strncpy(data[dataIdx].longi, token, sizeof(data[dataIdx].longi) - 1);
+			strncpy(data[dataIdx].longi, token,
+					sizeof(data[dataIdx].longi) - 1);
 			data[dataIdx].longi[sizeof(data[dataIdx].longi) - 1] = '\0';
 			address = Flash_Write_Str(address, data[dataIdx].longi);
 			address = Flash_Write_Char(address, '!');
 		}
 		dataIdx += 1;
-		if (dataIdx ==2){
-			LCD_Write_Info(data[nowIdx], data[nowIdx+1]);
+		if (dataIdx == 2) {
+			updateLCD();
 		}
 	}
 //	printf("busNM:%s, busRouteNo:%s, BusStopID:%s, lati:%s, longi:%s\r\n",
@@ -294,17 +302,19 @@ void Flash_Erase_Page(uint32_t address) {
 	Flash_Lock();  // ?��?��?�� 메모�?? ?���??
 }
 
-void splitData(char* strData){
+void splitData(char *strData) {
 	char *token;
 
 	token = strtok(strData, ","); // CarNM
 	strncpy(data[dataIdx].busNM, token, sizeof(data[dataIdx].busNM) - 1);
 
 	token = strtok(NULL, ","); // RouteNo
-	strncpy(data[dataIdx].busRouteno, token, sizeof(data[dataIdx].busRouteno) - 1);
+	strncpy(data[dataIdx].busRouteno, token,
+			sizeof(data[dataIdx].busRouteno) - 1);
 
 	token = strtok(NULL, ","); // StopID
-	strncpy(data[dataIdx].busStopID, token, sizeof(data[dataIdx].busStopID) - 1);
+	strncpy(data[dataIdx].busStopID, token,
+			sizeof(data[dataIdx].busStopID) - 1);
 
 	token = strtok(NULL, ","); // lati
 	strncpy(data[dataIdx].lati, token, sizeof(data[dataIdx].lati) - 1);
@@ -313,18 +323,18 @@ void splitData(char* strData){
 	strncpy(data[dataIdx].longi, token, sizeof(data[dataIdx].longi) - 1);
 }
 
-uint32_t CallData(uint32_t address){
-	char a[70] = {0,};
+uint32_t CallData(uint32_t address) {
+	char a[70] = { 0, };
 	int i = 0;
-	while(1){
-		a[i] = (char)Flash_Read(address);
+	while (1) {
+		a[i] = (char) Flash_Read(address);
 		address += 0x02;
-		if(a[i] == 0xFF){
+		if (a[i] == 0xFF) {
 			return address;
 		}
-		if(a[i] == '!'){
+		if (a[i] == '!') {
 			splitData(a);
-			dataIdx+=1;
+			dataIdx += 1;
 			i = -1;
 			memset(a, 0, 60);
 		}
@@ -336,30 +346,31 @@ uint32_t CallData(uint32_t address){
 char latitude[16];
 char longitude[16];
 
-double convertToDecimalDegrees(const char* coordinate, char type) {
-    int degrees;
-    double minutes;
-    double decimalDegrees;
+double convertToDecimalDegrees(const char *coordinate, char type) {
+	int degrees;
+	double minutes;
+	double decimalDegrees;
 
-    if (type == 'L') { // Latitude
-        // 첫 두 자리 (도)
-        degrees = (coordinate[0] - '0') * 10 + (coordinate[1] - '0'); // dd
-        // 나머지 부분 (분)
-        minutes = atof(coordinate + 2); // mm.mmmm
-    } else if (type == 'G') { // Longitude
-        // 첫 세 자리 (도)
-        degrees = (coordinate[0] - '0') * 100 + (coordinate[1] - '0') * 10 + (coordinate[2] - '0'); // ddd
-        // 나머지 부분 (분)
-        minutes = atof(coordinate + 3); // mm.mmmm
-    } else {
-        printf("Invalid type\n");
-        return;
-    }
+	if (type == 'L') { // Latitude
+		// 첫 두 자리 (도)
+		degrees = (coordinate[0] - '0') * 10 + (coordinate[1] - '0'); // dd
+		// 나머지 부분 (분)
+		minutes = atof(coordinate + 2); // mm.mmmm
+	} else if (type == 'G') { // Longitude
+		// 첫 세 자리 (도)
+		degrees = (coordinate[0] - '0') * 100 + (coordinate[1] - '0') * 10
+				+ (coordinate[2] - '0'); // ddd
+		// 나머지 부분 (분)
+		minutes = atof(coordinate + 3); // mm.mmmm
+	} else {
+		printf("Invalid type\n");
+		return;
+	}
 
-    // 소수점 부분 계산
-    decimalDegrees = degrees + (minutes / 60.0);
+	// 소수점 부분 계산
+	decimalDegrees = degrees + (minutes / 60.0);
 
-    return decimalDegrees;
+	return decimalDegrees;
 }
 
 void parseGPSData(uint8_t *buffer, uint16_t size) {
@@ -401,9 +412,24 @@ void parseGPSData(uint8_t *buffer, uint16_t size) {
 
 		// ?��?��?�� 결과�? ?��버그 출력
 		printf("\r\nLatitude: %.6f, Longitude: %.6f\r\n", la, lo);
+		CheckGPS(la, lo);
 	}
 }
 
+int checkGPSCnt = 0;
+
+void CheckGPS(double nowLati, double nowLongi) {
+	double busStopLati = atof(data[nowIdx].lati);
+	double busStopLongi = atof(data[nowIdx].longi);
+
+	if (nowLati >= (busStopLati - 0.00009)
+			&& nowLati <= (busStopLati + 0.00009)) {
+		if (nowLongi >= (busStopLongi - 0.00011)
+				&& nowLongi <= (busStopLongi + 0.00012)) {
+			checkGPSCnt++;
+		}
+	}
+}
 //==============================================================================
 //LoRa
 #define LoRa_RX_BUFFER_SIZE 64
@@ -464,8 +490,6 @@ uint8_t dataReceived = 0;
 
 uint8_t modeFlag = 0;
 
-
-
 int _write(int file, unsigned char *p, int len) {
 	if (UART_Print_Port == 0) {
 		HAL_UART_Transmit(&huart1, p, len, 10);
@@ -491,6 +515,7 @@ PUTCHAR_PROTOTYPE {
 	}
 	return ch;
 }
+uint32_t GPSTick = 0;
 
 /* USER CODE END 0 */
 
@@ -578,7 +603,7 @@ int main(void) {
 		strncpy(data[0].lati, "127.362724", sizeof(data[0].lati) - 1);
 		strncpy(data[0].longi, "36.391382", sizeof(data[0].longi) - 1);
 
-		LCD_Write_Info(data[nowIdx], data[nowIdx+1]);
+		LCD_Write_Info(data[nowIdx], data[nowIdx + 1]);
 	} else if (InfoModeFlag == 0) {
 		LCD_SendCommand(LCD_ADDR, CMD_LCD_CLEAR); //Clear
 		LCD_SendCommand(LCD_ADDR, CMD_LCD_CURSOR_LINE_1);
@@ -600,6 +625,8 @@ int main(void) {
 	//FW===================================================================
 	modeFlag = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_15);
 
+	GPSTick = HAL_GetTick();
+
 	/* USER CODE END 2 */
 
 	/* Infinite loop */
@@ -613,13 +640,13 @@ int main(void) {
 //		HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_14); //GPS LED
 
 		if (!modeFlag) { //Local Mode
-			while(1){
+			while (1) {
 				if (UART1_Rx_End) {
 					//printf("Echo\r\n");
 					if (!strcmp(UART1_Rx_Buffer, "Input")) {
 						Flash_Erase_Page(ModeFlashAddress);
 						Flash_Unlock();
-						Flash_Write(ModeFlashAddress, (uint8_t)0);
+						Flash_Write(ModeFlashAddress, (uint8_t) 0);
 						Flash_Lock();
 					} else if (!strcmp(UART1_Rx_Buffer, "OutPut")) {
 						Flash_Erase_Page(ModeFlashAddress);
@@ -629,7 +656,8 @@ int main(void) {
 					} else if ((!strncmp(UART1_Rx_Buffer, "Data", 4)
 							|| !strncmp(UART1_Rx_Buffer, "data", 4))
 							&& InfoModeFlag == 0) {
-						DataFlashAddress = Flash_Write_Data(DataFlashAddress, UART1_Rx_Buffer);
+						DataFlashAddress = Flash_Write_Data(DataFlashAddress,
+								UART1_Rx_Buffer);
 						//printf("Data\r\n");
 						printf("N\r\n");
 					}
@@ -641,15 +669,23 @@ int main(void) {
 					UART1_Rx_End = 0;
 				}
 
-				if (InfoModeFlag){
+				if (InfoModeFlag) {
 					if (dataReceived) {
 						parseGPSData(rxBuffer, RX3_BUFFER_SIZE);
 						dataReceived = 0;
 					}
+					if (HAL_GetTick() - GPSTick >= 2000) {
+						GPSTick = HAL_GetTick();
+						if (checkGPSCnt >= 4) {
+							nowIdx++;
+							updateLCD();
+						}
+						checkGPSCnt = 0;
+
+					}
 				}
 			}
 		}
-
 
 //
 //		LoRa_SendData(data, sizeof(data) - 1);
