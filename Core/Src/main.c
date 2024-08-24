@@ -435,7 +435,9 @@ void CheckGPS(double nowLati, double nowLongi) {
 #define LoRa_RX_BUFFER_SIZE 64
 
 uint8_t LoRaRxBuffer[LoRa_RX_BUFFER_SIZE]; // 수신 데이터를 저장할 버퍼
-volatile uint8_t rxCompleteFlag = 0; // 데이터 수신 완료 플래그
+volatile uint8_t LoRaRxEnd = 0; // 데이터 수신 완료 플래그
+uint8_t LoRaRxData[2]; // 수신 데이터를 저장할 버퍼
+uint8_t LoRaLen = 0;
 
 void SetMode(uint8_t mode) {
 	switch (mode) {
@@ -516,6 +518,7 @@ PUTCHAR_PROTOTYPE {
 	return ch;
 }
 uint32_t GPSTick = 0;
+uint32_t LoRaTick = 0;
 
 /* USER CODE END 0 */
 
@@ -554,7 +557,7 @@ int main(void) {
 	MX_USART3_UART_Init();
 	/* USER CODE BEGIN 2 */
 	HAL_UART_Receive_IT(&huart1, UART1_Rx_Data, 1);
-	HAL_UART_Receive_IT(&huart2, LoRaRxBuffer, 1);
+	HAL_UART_Receive_IT(&huart2, LoRaRxData, 1);
 	HAL_UART_Receive_IT(&huart3, rxBuffer, 1);
 	setvbuf(stdout, NULL, _IONBF, 0);
 	//	printf("HELL WORLD\r\n");
@@ -598,12 +601,11 @@ int main(void) {
 
 	//printf("ModeFlag:%d", InfoModeFlag);
 	if (InfoModeFlag == 1) {
-		DataFlashAddress = CallData(DataFlashAddress);
 		strncpy(data[0].busStopID, "44444", sizeof(data[0].busStopID) - 1);
 		strncpy(data[0].lati, "127.362724", sizeof(data[0].lati) - 1);
 		strncpy(data[0].longi, "36.391382", sizeof(data[0].longi) - 1);
 
-		LCD_Write_Info(data[nowIdx], data[nowIdx + 1]);
+		//LCD_Write_Info(data[nowIdx], data[nowIdx + 1]);
 	} else if (InfoModeFlag == 0) {
 		LCD_SendCommand(LCD_ADDR, CMD_LCD_CLEAR); //Clear
 		LCD_SendCommand(LCD_ADDR, CMD_LCD_CURSOR_LINE_1);
@@ -620,12 +622,13 @@ int main(void) {
 	//LoRa ================================================================
 	SetMode(0);
 
-	uint8_t data[] = "Hello LoRa!";
+
 
 	//FW===================================================================
-	modeFlag = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_15);
+	modeFlag = !HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_15);
 
 	GPSTick = HAL_GetTick();
+	LoRaTick = HAL_GetTick();
 
 	/* USER CODE END 2 */
 
@@ -640,6 +643,9 @@ int main(void) {
 //		HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_14); //GPS LED
 
 		if (!modeFlag) { //Local Mode
+			if (InfoModeFlag == 1){
+				DataFlashAddress = CallData(DataFlashAddress);
+			}
 			while (1) {
 				if (UART1_Rx_End) {
 					//printf("Echo\r\n");
@@ -674,6 +680,15 @@ int main(void) {
 						parseGPSData(rxBuffer, RX3_BUFFER_SIZE);
 						dataReceived = 0;
 					}
+					if (LoRaRxEnd) {
+						printf("LoRa : %s\r\n", LoRaRxBuffer);
+						for (int i = 0; i < LoRa_RX_BUFFER_SIZE; i++) {
+							LoRaRxBuffer[i] = '\0';
+						}
+						LoRaLen = 0;
+						LoRaRxEnd = 0; // 수신 완료 플래그 리셋
+
+					}
 					if (HAL_GetTick() - GPSTick >= 2000) {
 						GPSTick = HAL_GetTick();
 						if (checkGPSCnt >= 4) {
@@ -681,19 +696,33 @@ int main(void) {
 							updateLCD();
 						}
 						checkGPSCnt = 0;
-
 					}
 				}
 			}
 		}
 
-//
-//		LoRa_SendData(data, sizeof(data) - 1);
-//
-//		if (rxCompleteFlag) {
-//			rxCompleteFlag = 0; // 수신 완료 플래그 리셋
-//			printf("LoRa : %s\r\n", LoRaRxBuffer);
-//		}
+		else{ //Remote Mode
+			uint8_t data[] = {0x02, 'h', 'a', 'h', 'a', 0x03};
+			while(1){
+				if (UART1_Rx_End) {
+					printf("Re:%s!!!!\r\n", UART1_Rx_Buffer);
+					for (int i = 0; i < 50; i++) {
+						UART1_Rx_Buffer[i] = '\0';
+					}
+					UART1_Len = 0;
+					UART1_Rx_End = 0;
+				}
+				if (HAL_GetTick() - LoRaTick >= 3000) {
+					LoRaTick = HAL_GetTick();
+					LoRa_SendData(data, sizeof(data) - 1);
+				}
+			}
+		}
+
+
+
+
+
 //
 //		HAL_Delay(100);
 		/* USER CODE END WHILE */
@@ -971,6 +1000,8 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 	static uint8_t UART1_Chk = 0;
 	static uint16_t index = 0;
+	static uint8_t LoRaChk = 0;
+	static uint16_t LoRaIdx = 0;
 	if (huart->Instance == USART1) {
 		UART1_Rx_End = 0;
 		switch (UART1_Chk) {
@@ -998,8 +1029,28 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 		//HAL_UART_Transmit(&huart1, UART1_Rx_Data, 1, 10);
 		HAL_UART_Receive_IT(&huart1, UART1_Rx_Data, 1);
 	} else if (huart->Instance == USART2) {
-		rxCompleteFlag = 1;
-		HAL_UART_Receive_IT(&huart2, LoRaRxBuffer, 1);
+		LoRaRxEnd = 0;
+		switch (LoRaChk) {
+		case 0:
+			if (LoRaRxData[0] == 0x02) {
+				LoRaChk = 1;
+			} else
+				LoRaChk = 0;
+			break;
+		case 1:
+			if (LoRaRxData[0] == 0x03) {
+				LoRaRxEnd = 1;
+				LoRaChk = 0;
+			} else {
+				LoRaRxBuffer[UART1_Len] = LoRaRxData[0];
+				LoRaLen++;
+			}
+			break;
+		default:
+			LoRaChk = 0;
+			break;
+		}
+		HAL_UART_Receive_IT(&huart2, LoRaRxData, 1);
 	} else if (huart->Instance == USART3) {
 		dataReceived = 1;
 	}
