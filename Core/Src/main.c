@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include "nmea_parse.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -70,9 +71,27 @@ struct DataFlash {
 	char busStopID[8];
 	char lati[16];
 	char longi[16];
-} data[150];
+	uint8_t isPeople;
+} data[150] = {0};
 
 int nowIdx = 0;
+
+uint8_t GPSLEDFlag = 0;
+
+/* USER CODE BEGIN PV */
+#define RxBuffer_SIZE 64  //configure uart receive buffer size
+#define DataBuffer_SIZE 512 //gather a few rxBuffer frames before parsing
+
+// Functions for UART receiving, based on the DMA receive function, implementations may vary
+uint16_t oldPos = 0;
+uint16_t newPos = 0;
+uint8_t RxBuffer[RxBuffer_SIZE];
+uint8_t DataBuffer[DataBuffer_SIZE];
+
+//create a GPS data structure
+GPS myData;
+
+uint16_t GPSRange = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -89,6 +108,27 @@ static void MX_USART3_UART_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
+{
+    oldPos = newPos; //keep track of the last position in the buffer
+    if(oldPos + Size > DataBuffer_SIZE){ //if the buffer is full, parse it, then reset the buffer
+
+        uint16_t datatocopy = DataBuffer_SIZE-oldPos;  // find out how much space is left in the main buffer
+        memcpy ((uint8_t *)DataBuffer+oldPos, RxBuffer, datatocopy);  // copy data in that remaining space
+
+        oldPos = 0;  // point to the start of the buffer
+        memcpy ((uint8_t *)DataBuffer, (uint8_t *)RxBuffer+datatocopy, (Size-datatocopy));  // copy the remaining data
+        newPos = (Size-datatocopy);  // update the position
+    }
+    else{
+        memcpy((uint8_t *)DataBuffer+oldPos, RxBuffer, Size); //copy received data to the buffer
+        newPos = Size+oldPos; //update buffer position
+
+    }
+    HAL_UARTEx_ReceiveToIdle_DMA(&huart3, (uint8_t *)RxBuffer, RxBuffer_SIZE); //re-enable the DMA interrupt
+    __HAL_DMA_DISABLE_IT(&hdma_usart3_rx, DMA_IT_HT); //disable the half transfer interrupt
+}
 
 //LCD ============================================
 HAL_StatusTypeDef LCD_SendInternal(uint8_t lcd_addr, uint8_t data,
@@ -173,6 +213,29 @@ void LCD_Write_Info(struct DataFlash nowData, struct DataFlash nextData) {
 
 void updateLCD() {
 	LCD_Write_Info(data[nowIdx], data[nowIdx + 1]);
+}
+
+void LCD_Write_Arrive(struct DataFlash nowData) {
+	LCD_SendCommand(LCD_ADDR, CMD_LCD_CLEAR); //Clear
+	LCD_SendCommand(LCD_ADDR, CMD_LCD_CURSOR_LINE_1);
+	LCD_SendString(LCD_ADDR, nowData.busRouteno);
+	LCD_SendData(LCD_ADDR, 0);
+	for (int i = 0; i < 11; i++) {
+		LCD_SendCommand(LCD_ADDR, CMD_LCD_CURSOR_RIGHT);
+	}
+	LCD_SendData(LCD_ADDR, 1);
+	LCD_SendCommand(LCD_ADDR, CMD_LCD_CURSOR_LINE_2);
+	LCD_SendData(LCD_ADDR, 3);
+	LCD_SendData(LCD_ADDR, 3);
+	LCD_SendData(LCD_ADDR, 3);
+	LCD_SendString(LCD_ADDR, nowData.busStopID);
+	LCD_SendData(LCD_ADDR, 4);
+	LCD_SendData(LCD_ADDR, 4);
+	LCD_SendData(LCD_ADDR, 4);
+	for (int i = 0; i < 4; i++) {
+		LCD_SendCommand(LCD_ADDR, CMD_LCD_CURSOR_RIGHT);
+	}
+	LCD_SendData(LCD_ADDR, 1);
 }
 
 //Flash===========================================================
@@ -376,7 +439,7 @@ double convertToDecimalDegrees(const char *coordinate, char type) {
 void parseGPSData(uint8_t *buffer, uint16_t size) {
 	char *nmeaGGA = NULL;
 	double la, lo;
-	//printf("%s", (char*)buffer);
+	//xprintf("%s", (char*)buffer);
 	// DMA 버퍼?��?�� $GPGGA 문자?��?�� �??��
 	nmeaGGA = strstr((char*) buffer, "GLL");
 	if (nmeaGGA != NULL) {
@@ -411,7 +474,13 @@ void parseGPSData(uint8_t *buffer, uint16_t size) {
 		token = strtok(NULL, ",");
 
 		// ?��?��?�� 결과�? ?��버그 출력
-		//printf("\r\nLatitude: %.6f, Longitude: %.6f\r\n", la, lo);
+		printf("\r\nLatitude: %.6f, Longitude: %.6f\r\n", la, lo);
+		if(la >= 200 || lo >= 200){
+			GPSLEDFlag = 0;
+		}
+		else{
+			GPSLEDFlag = 1;
+		}
 		CheckGPS(la, lo);
 	}
 }
@@ -425,10 +494,10 @@ void CheckGPS(double nowLati, double nowLongi) {
 	//printf("NowLa : %f, NowLo : %f\r\n", nowLati, nowLongi);
 	//printf("First : %d\r\n", nowLati >= (busStopLati - 0.00009)
 	//		&& nowLati <= (busStopLati + 0.00009));
-	if (nowLati >= (busStopLati - 0.00009)
-			&& nowLati <= (busStopLati + 0.00009)) {
-		if (nowLongi >= (busStopLongi - 0.00011)
-				&& nowLongi <= (busStopLongi + 0.00012)) {
+	if (nowLati >= (busStopLati - (0.000009 * GPSRange))
+			&& nowLati <= (busStopLati + (0.000009 * GPSRange))) {
+		if (nowLongi >= (busStopLongi - (0.000011 * GPSRange))
+				&& nowLongi <= (busStopLongi + (0.000011 * GPSRange))) {
 			checkGPSCnt++;
 			//printf("Check!!!!!!!!\r\b");
 		}
@@ -477,7 +546,7 @@ uint8_t BNumber[8] = { 0x15, 0x1d, 0x17, 0x1d, 0x1, 0x10, 0x1f };
 uint8_t BUp[8] = { 0x4, 0xe, 0x1f, 0x0, 0x4, 0xe, 0x1f };
 uint8_t BDown[8] = { 0x4, 0xe, 0x1f, 0x0, 0x4, 0xe, 0x1f };
 uint8_t BRight[8] = { 0x10, 0x18, 0x1c, 0x1e, 0x1c, 0x18, 0x10 };
-uint8_t BLeft[8] = { 0x10, 0x18, 0x1c, 0x1e, 0x1c, 0x18, 0x10 };
+uint8_t BLeft[8] = { 0x01, 0x03, 0x07, 0x0f, 0x07, 0x03, 0x01 };
 
 unsigned char UART_Print_Port = 0; //0 = USB, 1 = LoRa, 2 = GPS
 uint8_t UART1_Rx_Data[1];
@@ -523,6 +592,8 @@ PUTCHAR_PROTOTYPE {
 }
 uint32_t GPSTick = 0;
 uint32_t LoRaTick = 0;
+uint32_t GPSFIXTick = 0;
+
 
 /* USER CODE END 0 */
 
@@ -592,9 +663,12 @@ int main(void) {
 //	LCD_SendData(LCD_ADDR, 1);
 
 	//flash
+	uint32_t GPSRangeFlashAddress = 0x0800C400;  // ???��?�� ?��?��?�� 메모�?? 주소
 	uint32_t ModeFlashAddress = 0x0800CB00;  // ???��?�� ?��?��?�� 메모�?? 주소
 	uint32_t DataFlashAddress = 0x0800CC00; // ???��?�� ?��?��?�� 메모�?? 주소
-	uint16_t InfoModeFlag = Flash_Read(ModeFlashAddress);
+	uint16_t InfoModeFlag = 1;
+	GPSRange = Flash_Read(GPSRangeFlashAddress);
+	printf("Range : %d!!!!!!!!!!!!!!!!\r\n", GPSRange);
 //	Flash_Erase_Page(DataFlashAddress);
 //	Flash_Erase_Page(0x0800D000);
 //	Flash_Erase_Page(0x0800D400);
@@ -614,7 +688,9 @@ int main(void) {
 	} else if (InfoModeFlag == 0) {
 		LCD_SendCommand(LCD_ADDR, CMD_LCD_CLEAR); //Clear
 		LCD_SendCommand(LCD_ADDR, CMD_LCD_CURSOR_LINE_1);
-		LCD_SendString(LCD_ADDR, "InputMode");
+		LCD_SendString(LCD_ADDR, "DATADOWNLOAD");
+		LCD_SendCommand(LCD_ADDR, CMD_LCD_CURSOR_LINE_2);
+		LCD_SendString(LCD_ADDR, "MODE");
 	} else {
 		InfoModeFlag = 0;
 		Flash_Unlock();
@@ -622,7 +698,9 @@ int main(void) {
 		Flash_Lock();
 	}
 
-	HAL_UART_Receive_DMA(&huart3, rxBuffer, RX3_BUFFER_SIZE);
+	HAL_UARTEx_ReceiveToIdle_DMA(&huart3, (uint8_t *)RxBuffer, RxBuffer_SIZE);
+	__HAL_DMA_DISABLE_IT(&hdma_usart3_rx, DMA_IT_HT);
+	int Serialcnt = 0;
 
 	//LoRa ================================================================
 	SetMode(0);
@@ -634,6 +712,9 @@ int main(void) {
 
 	GPSTick = HAL_GetTick();
 	LoRaTick = HAL_GetTick();
+	GPSFIXTick = HAL_GetTick();
+
+	uint8_t IOMode = 0; //0 : In, 1 : Out
 
 	/* USER CODE END 2 */
 
@@ -642,9 +723,8 @@ int main(void) {
 	while (1) {
 //		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_11); //LAMP2
 //		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_12); //LAMP1
-//		//HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_8); //BUZZER
+//
 //		HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_9); //Debug LED
-//		HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_13); //Stop LED
 //		HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_14); //GPS LED
 
 		if (!modeFlag) { //Local Mode
@@ -652,6 +732,7 @@ int main(void) {
 				updateLCD();
 			}
 			while (1) {
+				nmea_parse(&myData, DataBuffer);
 				if (UART1_Rx_End) {
 					//printf("Echo\r\n");
 					if (!strcmp(UART1_Rx_Buffer, "Input")) {
@@ -671,6 +752,17 @@ int main(void) {
 								UART1_Rx_Buffer);
 						//printf("Data\r\n");
 						printf("N\r\n");
+					} else if (!strncmp(UART1_Rx_Buffer, "range", 5)){
+						char *token;
+
+						token = strtok(UART1_Rx_Buffer, ",");
+						token = strtok(NULL, "!");
+						GPSRange = atoi(token);
+
+						Flash_Erase_Page(GPSRangeFlashAddress);
+						Flash_Unlock();
+						Flash_Write(GPSRangeFlashAddress, (uint8_t) GPSRange);
+						Flash_Lock();
 					}
 					//HAL_UART_Transmit(&huart1, UART1_Rx_Buffer, UART1_Len, 2);
 					for (int i = 0; i < 50; i++) {
@@ -694,15 +786,48 @@ int main(void) {
 						LoRaRxEnd = 0; // 수신 완료 플래그 리셋
 
 					}
-					if (HAL_GetTick() - GPSTick >= 2000) {
+					if (HAL_GetTick() - GPSTick >= 1000) {
 						GPSTick = HAL_GetTick();
 						printf("CNT : %d\r\n", checkGPSCnt);
-						if (checkGPSCnt >= 4) {
-							nowIdx++;
-							updateLCD();
+						if (checkGPSCnt >= 2) {
+							if(IOMode == 0){
+								LCD_Write_Arrive(data[nowIdx]);
+								HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 1); //BUZZER
+							}
+							HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 0); //BUZZER
+							HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_13); //Stop LED
+							IOMode = 1;
+						}
+						else {
+							if(IOMode == 1){
+								nowIdx++;
+								updateLCD();
+								HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 1); //BUZZER
+							}
+							HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 0); //BUZZER
+							HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, 0); //Stop LED
+							IOMode = 0;
 						}
 						checkGPSCnt = 0;
 					}
+					if(myData.fix == 0){
+						if (HAL_GetTick() - GPSFIXTick >= 500) {
+							GPSFIXTick = HAL_GetTick();
+							HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_14); //GPS LED
+							printf("%d: No fix\r\n", Serialcnt);
+							Serialcnt++;
+						}
+					}
+					else{
+						if(HAL_GetTick() - GPSFIXTick >= 500) {
+							HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, 1); //GPS LED
+//							printf("\r\n%d: Lat: %f %c, Lon: %f %c, Alt: %f m, Satellites: %d HDOP: %f\r\n",
+//							                Serialcnt, myData.latitude, myData.latSide, myData.longitude, myData.lonSide, myData.altitude, myData.satelliteCount, myData.hdop);
+							CheckGPS(myData.latitude, myData.longitude);
+
+						}
+					}
+
 				}
 			}
 		}
