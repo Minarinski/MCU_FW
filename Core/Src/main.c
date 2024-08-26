@@ -509,7 +509,7 @@ void CheckGPS(double nowLati, double nowLongi) {
 
 uint8_t LoRaRxBuffer[LoRa_RX_BUFFER_SIZE]; // 수신 데이터를 저장할 버퍼
 volatile uint8_t LoRaRxEnd = 0; // 데이터 수신 완료 플래그
-uint8_t LoRaRxData[2]; // 수신 데이터를 저장할 버퍼
+uint8_t LoRaRxData[11]; // 수신 데이터를 저장할 버퍼
 uint8_t LoRaLen = 0;
 
 void SetMode(uint8_t mode) {
@@ -540,6 +540,49 @@ void LoRa_SendData(uint8_t *data, uint16_t length) {
 
 	// 데이터 송신
 	HAL_UART_Transmit(&huart2, data, length, HAL_MAX_DELAY);
+}
+
+int help = 0;
+int routeNo = 0;
+int busNM = 0;
+int arsID = 0;
+
+void parseLora(uint8_t* loraData){
+
+	if(loraData[0] == '0'){
+		char *token;
+
+		token = strtok(loraData, "@");
+		arsID = atoi(token);
+		printf("\r\narsID : %d!!!!!!\r\n\r\n", arsID);
+
+		for(int i = 0;i<150;i++){
+			if(atoi(data[i].busRouteno) != routeNo){
+				printf("\r\nNOT ROUTENO\r\n\r\n");
+				break;
+			}
+			if(atoi(data[i].busNM) != busNM){
+				printf("\r\nNOT busNM\r\n\r\n");
+				break;
+			}
+			if(atoi(data[i].busStopID) == arsID){
+				data[i].isPeople = 1;
+				printf("\r\n%d\r\n\r\n", i);
+				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 1); //BUZZER
+				HAL_Delay(100);
+				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 0); //BUZZER
+				break;
+			}
+		}
+	}
+	else{
+		help = loraData[0] - '0';
+		routeNo = (loraData[2]-'0') * 100 + (loraData[3]-'0') * 10 + (loraData[4] - '0');
+		busNM = (loraData[6]-'0') * 1000 + (loraData[7]-'0') * 100 + (loraData[8] - '0') * 10 + (loraData[9] - '0');
+		printf("\r\nhelp : %d, routeNo : %d, busNM : %d\r\n\r\n",help, routeNo, busNM);
+	}
+
+
 }
 
 uint8_t BNumber[8] = { 0x15, 0x1d, 0x17, 0x1d, 0x1, 0x10, 0x1f };
@@ -593,6 +636,10 @@ PUTCHAR_PROTOTYPE {
 uint32_t GPSTick = 0;
 uint32_t LoRaTick = 0;
 uint32_t GPSFIXTick = 0;
+uint32_t ArriveTick = 0;
+
+int asd = 2;
+int asd2 = 2;
 
 
 /* USER CODE END 0 */
@@ -611,7 +658,7 @@ int main(void) {
 
 	/* Reset of all peripherals, Initializes the Flash interface and the Systick. */
 	HAL_Init();
-
+	HAL_Delay(500);
 	/* USER CODE BEGIN Init */
 
 	/* USER CODE END Init */
@@ -632,7 +679,7 @@ int main(void) {
 	MX_USART3_UART_Init();
 	/* USER CODE BEGIN 2 */
 	HAL_UART_Receive_IT(&huart1, UART1_Rx_Data, 1);
-	HAL_UART_Receive_IT(&huart2, LoRaRxData, 1);
+	HAL_UART_Receive_IT(&huart2, LoRaRxData, 10);
 	HAL_UART_Receive_IT(&huart3, rxBuffer, 1);
 	setvbuf(stdout, NULL, _IONBF, 0);
 	//	printf("HELL WORLD\r\n");
@@ -680,9 +727,13 @@ int main(void) {
 	//printf("ModeFlag:%d", InfoModeFlag);
 	if (InfoModeFlag >= 1) {
 		DataFlashAddress = CallData(DataFlashAddress);
-		strncpy(data[0].busStopID, "44444", sizeof(data[0].busStopID) - 1);
-		strncpy(data[0].lati, "36.124406", sizeof(data[0].lati) - 1);
-		strncpy(data[0].longi, "128.095744", sizeof(data[0].longi) - 1);
+		strncpy(data[0].busStopID, "33333", sizeof(data[0].busStopID) - 1);
+		strncpy(data[0].lati, "36.391251", sizeof(data[0].lati) - 1);
+		strncpy(data[0].longi, "127.363235", sizeof(data[0].longi) - 1);
+
+		strncpy(data[1].busStopID, "44444", sizeof(data[1].busStopID) - 1);
+		strncpy(data[1].lati, "36.391567112", sizeof(data[1].lati) - 1);
+		strncpy(data[1].longi, "127.362770", sizeof(data[1].longi) - 1);
 
 		//LCD_Write_Info(data[nowIdx], data[nowIdx + 1]);
 	} else if (InfoModeFlag == 0) {
@@ -713,16 +764,17 @@ int main(void) {
 	GPSTick = HAL_GetTick();
 	LoRaTick = HAL_GetTick();
 	GPSFIXTick = HAL_GetTick();
+	ArriveTick = HAL_GetTick();
 
 	uint8_t IOMode = 0; //0 : In, 1 : Out
+	uint8_t ArriveFlag = 0;
 
 	/* USER CODE END 2 */
 
 	/* Infinite loop */
 	/* USER CODE BEGIN WHILE */
 	while (1) {
-//		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_11); //LAMP2
-//		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_12); //LAMP1
+//
 //
 //		HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_9); //Debug LED
 //		HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_14); //GPS LED
@@ -732,7 +784,6 @@ int main(void) {
 				updateLCD();
 			}
 			while (1) {
-				nmea_parse(&myData, DataBuffer);
 				if (UART1_Rx_End) {
 					//printf("Echo\r\n");
 					if (!strcmp(UART1_Rx_Buffer, "Input")) {
@@ -778,9 +829,10 @@ int main(void) {
 						dataReceived = 0;
 					}
 					if (LoRaRxEnd) {
-						printf("LoRa : %s\r\n", LoRaRxBuffer);
-						for (int i = 0; i < LoRa_RX_BUFFER_SIZE; i++) {
-							LoRaRxBuffer[i] = '\0';
+						printf("LoRa : %s\r\n", LoRaRxData);
+						parseLora(LoRaRxData);
+						for (int i = 0; i < 11; i++) {
+							LoRaRxData[i] = '\0';
 						}
 						LoRaLen = 0;
 						LoRaRxEnd = 0; // 수신 완료 플래그 리셋
@@ -788,71 +840,116 @@ int main(void) {
 					}
 					if (HAL_GetTick() - GPSTick >= 1000) {
 						GPSTick = HAL_GetTick();
-						printf("CNT : %d\r\n", checkGPSCnt);
+						//printf("CNT : %d\r\n", checkGPSCnt);
 						if (checkGPSCnt >= 2) {
+							HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 0); //BUZZER
 							if(IOMode == 0){
 								LCD_Write_Arrive(data[nowIdx]);
 								HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 1); //BUZZER
+								ArriveFlag = 1;
 							}
-							HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 0); //BUZZER
+
 							HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_13); //Stop LED
 							IOMode = 1;
 						}
 						else {
+							HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 0); //BUZZER
 							if(IOMode == 1){
 								nowIdx++;
 								updateLCD();
 								HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 1); //BUZZER
+								ArriveFlag = 0;
 							}
-							HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 0); //BUZZER
+
 							HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, 0); //Stop LED
 							IOMode = 0;
 						}
 						checkGPSCnt = 0;
 					}
-					if(myData.fix == 0){
-						if (HAL_GetTick() - GPSFIXTick >= 500) {
-							GPSFIXTick = HAL_GetTick();
-							HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_14); //GPS LED
-							printf("%d: No fix\r\n", Serialcnt);
-							Serialcnt++;
+
+					if (HAL_GetTick() - GPSFIXTick >= 500) {
+						printf("%s\r\n", DataBuffer);
+						nmea_parse(&myData, DataBuffer);
+						if(myData.fix == 0){
+								GPSFIXTick = HAL_GetTick();
+								HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_14); //GPS LED
+								printf("%d: No fix\r\n", Serialcnt);
+								Serialcnt++;
 						}
+						else{
+								HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, 1); //GPS LED
+								printf("\r\n%d: Lat: %f %c, Lon: %f %c, Alt: %f m, Satellites: %d HDOP: %f\r\n",
+												Serialcnt, myData.latitude, myData.latSide, myData.longitude, myData.lonSide, myData.altitude, myData.satelliteCount, myData.hdop);
+								CheckGPS(myData.latitude, myData.longitude);
+						}
+					}
+					if(HAL_GetTick() - ArriveTick >= 100){
+						ArriveTick = HAL_GetTick();
+						if(data[nowIdx].isPeople == 1){
+							if(ArriveFlag == 1){
+								HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_11);
+							}
+							else{
+								HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, 1); //LAMP1
+							}
+						}
+						else{
+							HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, 0); //LAMP1
+						}
+					}
+
+					if(data[nowIdx+1].isPeople == 1){
+						HAL_GPIO_WritePin(GPIOA, GPIO_PIN_12, 1); //LAMP2
 					}
 					else{
-						if(HAL_GetTick() - GPSFIXTick >= 500) {
-							HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, 1); //GPS LED
-//							printf("\r\n%d: Lat: %f %c, Lon: %f %c, Alt: %f m, Satellites: %d HDOP: %f\r\n",
-//							                Serialcnt, myData.latitude, myData.latSide, myData.longitude, myData.lonSide, myData.altitude, myData.satelliteCount, myData.hdop);
-							CheckGPS(myData.latitude, myData.longitude);
-
-						}
+						HAL_GPIO_WritePin(GPIOA, GPIO_PIN_12, 0); //LAMP2
 					}
-
 				}
 			}
 		}
 
 		else{ //Remote Mode
-			uint8_t data[] = {0x02, 'h', 'a', 'h', 'a', 0x03};
+			uint8_t data[] = "1,604,1312";
+			uint8_t data4[] = "000044444@";
+			uint8_t data3[] = "000033333@";
+
 			while(1){
 				if (UART1_Rx_End) {
-					printf("Re:%s!!!!\r\n", UART1_Rx_Buffer);
+					printf("Re:%s, %d!!!!\r\n", UART1_Rx_Buffer, strlen(UART1_Rx_Buffer));
 					for (int i = 0; i < 50; i++) {
 						UART1_Rx_Buffer[i] = '\0';
 					}
+					LoRa_SendData(UART1_Rx_Buffer, strlen((char*)UART1_Rx_Buffer));
 					UART1_Len = 0;
 					UART1_Rx_End = 0;
 				}
-				if (HAL_GetTick() - LoRaTick >= 3000) {
+				if (HAL_GetTick() - LoRaTick >= 2000) {
 					LoRaTick = HAL_GetTick();
-					LoRa_SendData(data, sizeof(data) - 1);
+					if(asd < 2){
+						if(asd%2 == 0){
+							LoRa_SendData(data, sizeof(data)-1);
+							printf("%s\r\n", data);
+						}
+						else{
+							LoRa_SendData(data3, sizeof(data3)-1);
+							printf("%s\r\n", data3);
+						}
+						asd++;
+					}
+					if(asd2 < 2){
+						if(asd2%2 == 0){
+							LoRa_SendData(data, sizeof(data)-1);
+							printf("%s\r\n", data);
+						}
+						else{
+							LoRa_SendData(data4, sizeof(data4)-1);
+							printf("%s\r\n", data4);
+						}
+						asd2++;
+					}
 				}
 			}
 		}
-
-
-
-
 
 //
 //		HAL_Delay(100);
@@ -1117,8 +1214,10 @@ static void MX_GPIO_Init(void) {
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	if (GPIO_Pin == GPIO_PIN_5) {
 		printf("0x020,10x03\r\n");
+		asd=0;
 	} else if (GPIO_Pin == GPIO_PIN_6) {
 		printf("0x021,10x03\r\n");
+		asd2=0;
 	} else if (GPIO_Pin == GPIO_PIN_7) {
 		printf("0x022,10x03\r\n");
 	} else if (GPIO_Pin == GPIO_PIN_0) {
@@ -1160,11 +1259,13 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 		//HAL_UART_Transmit(&huart1, UART1_Rx_Data, 1, 10);
 		HAL_UART_Receive_IT(&huart1, UART1_Rx_Data, 1);
 	} else if (huart->Instance == USART2) {
-		LoRaRxEnd = 0;
+		LoRaRxEnd = 1;
+		//printf("LoRaChk!!!!!!!!%s\r\n", LoRaRxData);
 		switch (LoRaChk) {
 		case 0:
 			if (LoRaRxData[0] == 0x02) {
 				LoRaChk = 1;
+
 			} else
 				LoRaChk = 0;
 			break;
@@ -1181,7 +1282,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 			LoRaChk = 0;
 			break;
 		}
-		HAL_UART_Receive_IT(&huart2, LoRaRxData, 1);
+		HAL_UART_Receive_IT(&huart2, LoRaRxData, 10);
 	} else if (huart->Instance == USART3) {
 		dataReceived = 1;
 	}
