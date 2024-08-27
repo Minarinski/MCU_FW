@@ -215,6 +215,28 @@ void updateLCD() {
 	LCD_Write_Info(data[nowIdx], data[nowIdx + 1]);
 }
 
+void notGPSLCD(){
+	LCD_SendCommand(LCD_ADDR, CMD_LCD_CLEAR); //Clear
+	LCD_SendCommand(LCD_ADDR, CMD_LCD_CURSOR_LINE_1);
+	LCD_SendString(LCD_ADDR, data[0].busRouteno);
+	LCD_SendData(LCD_ADDR, 0);
+	for (int i = 0; i < 11; i++) {
+		LCD_SendCommand(LCD_ADDR, CMD_LCD_CURSOR_RIGHT);
+	}
+	LCD_SendData(LCD_ADDR, 1);
+	LCD_SendCommand(LCD_ADDR, CMD_LCD_CURSOR_LINE_2);
+	LCD_SendData(LCD_ADDR, 3);
+	LCD_SendString(LCD_ADDR, "-----");
+	LCD_SendData(LCD_ADDR, 3);
+	LCD_SendData(LCD_ADDR, 3);
+	LCD_SendData(LCD_ADDR, 3);
+	LCD_SendString(LCD_ADDR, "-----");
+	for (int i = 0; i < 1; i++) {
+		LCD_SendCommand(LCD_ADDR, CMD_LCD_CURSOR_RIGHT);
+	}
+	LCD_SendData(LCD_ADDR, 1);
+}
+
 void LCD_Write_Arrive(struct DataFlash nowData) {
 	LCD_SendCommand(LCD_ADDR, CMD_LCD_CLEAR); //Clear
 	LCD_SendCommand(LCD_ADDR, CMD_LCD_CURSOR_LINE_1);
@@ -405,6 +427,16 @@ uint32_t CallData(uint32_t address) {
 	}
 }
 
+void Flash_Clear(){
+		Flash_Erase_Page(0x0800CC00);
+		Flash_Erase_Page(0x0800D000);
+		Flash_Erase_Page(0x0800D400);
+		Flash_Erase_Page(0x0800D800);
+		Flash_Erase_Page(0x0800DC00);
+		Flash_Erase_Page(0x0800E000);
+		Flash_Erase_Page(0x0800E400);
+}
+
 // GPS=======================================================
 char latitude[16];
 char longitude[16];
@@ -503,6 +535,23 @@ void CheckGPS(double nowLati, double nowLongi) {
 		}
 	}
 }
+
+void NowBusStop(double nowLati, double nowLongi){
+	double busStopLati = 0;
+	double busStopLongi = 0;
+	for(int i = 0;i<150;i++){
+		busStopLati = atof(data[i].lati);
+		busStopLongi = atof(data[i].longi);
+		if (nowLati >= (busStopLati - (0.000009 * GPSRange))
+				&& nowLati <= (busStopLati + (0.000009 * GPSRange))) {
+			if (nowLongi >= (busStopLongi - (0.000011 * GPSRange))
+					&& nowLongi <= (busStopLongi + (0.000011 * GPSRange))) {
+				printf("\r\n%d!!!!!!!!\r\n\r\n", i);
+				nowIdx = i;
+			}
+		}
+	}
+}
 //==============================================================================
 //LoRa
 #define LoRa_RX_BUFFER_SIZE 64
@@ -568,9 +617,9 @@ void parseLora(uint8_t* loraData){
 			if(atoi(data[i].busStopID) == arsID){
 				data[i].isPeople = 1;
 				printf("\r\n%d\r\n\r\n", i);
-				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 1); //BUZZER
-				HAL_Delay(100);
-				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 0); //BUZZER
+//				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 1); //BUZZER
+//				HAL_Delay(100);
+//				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 0); //BUZZER
 				break;
 			}
 		}
@@ -639,7 +688,6 @@ uint32_t GPSFIXTick = 0;
 uint32_t ArriveTick = 0;
 
 int asd = 2;
-int asd2 = 2;
 
 
 /* USER CODE END 0 */
@@ -658,7 +706,7 @@ int main(void) {
 
 	/* Reset of all peripherals, Initializes the Flash interface and the Systick. */
 	HAL_Init();
-	HAL_Delay(500);
+	HAL_Delay(1000);
 	/* USER CODE BEGIN Init */
 
 	/* USER CODE END Init */
@@ -713,16 +761,10 @@ int main(void) {
 	uint32_t GPSRangeFlashAddress = 0x0800C400;  // ???��?�� ?��?��?�� 메모�?? 주소
 	uint32_t ModeFlashAddress = 0x0800CB00;  // ???��?�� ?��?��?�� 메모�?? 주소
 	uint32_t DataFlashAddress = 0x0800CC00; // ???��?�� ?��?��?�� 메모�?? 주소
-	uint16_t InfoModeFlag = 1;
-	GPSRange = Flash_Read(GPSRangeFlashAddress);
-	printf("Range : %d!!!!!!!!!!!!!!!!\r\n", GPSRange);
-//	Flash_Erase_Page(DataFlashAddress);
-//	Flash_Erase_Page(0x0800D000);
-//	Flash_Erase_Page(0x0800D400);
-//	Flash_Erase_Page(0x0800D800);
-//	Flash_Erase_Page(0x0800DC00);
-//	Flash_Erase_Page(0x0800E000);
-//	Flash_Erase_Page(0x0800E400);
+	uint16_t InfoModeFlag = Flash_Read(ModeFlashAddress) & 0x0000FFFF;
+	GPSRange = Flash_Read(GPSRangeFlashAddress) & 0x0000FFFF;
+	//printf("Range : %d!!!!!!!!!!!!!!!!\r\n", GPSRange);
+
 
 	//printf("ModeFlag:%d", InfoModeFlag);
 	if (InfoModeFlag >= 1) {
@@ -768,6 +810,7 @@ int main(void) {
 
 	uint8_t IOMode = 0; //0 : In, 1 : Out
 	uint8_t ArriveFlag = 0;
+	uint8_t NowBusStopFlag = 0;
 
 	/* USER CODE END 2 */
 
@@ -781,7 +824,7 @@ int main(void) {
 
 		if (!modeFlag) { //Local Mode
 			if (InfoModeFlag >= 1){
-				updateLCD();
+				notGPSLCD();
 			}
 			while (1) {
 				if (UART1_Rx_End) {
@@ -791,6 +834,7 @@ int main(void) {
 						Flash_Unlock();
 						Flash_Write(ModeFlashAddress, (uint8_t) 0);
 						Flash_Lock();
+						Flash_Clear();
 					} else if (!strcmp(UART1_Rx_Buffer, "OutPut")) {
 						Flash_Erase_Page(ModeFlashAddress);
 						Flash_Unlock();
@@ -831,6 +875,7 @@ int main(void) {
 					if (LoRaRxEnd) {
 						printf("LoRa : %s\r\n", LoRaRxData);
 						parseLora(LoRaRxData);
+						LoRa_SendData(LoRaRxData, sizeof(LoRaRxData)-1);
 						for (int i = 0; i < 11; i++) {
 							LoRaRxData[i] = '\0';
 						}
@@ -868,19 +913,24 @@ int main(void) {
 					}
 
 					if (HAL_GetTick() - GPSFIXTick >= 500) {
-						printf("%s\r\n", DataBuffer);
+						//printf("%s\r\n", DataBuffer);
 						nmea_parse(&myData, DataBuffer);
 						if(myData.fix == 0){
 								GPSFIXTick = HAL_GetTick();
 								HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_14); //GPS LED
-								printf("%d: No fix\r\n", Serialcnt);
+								//printf("%d: No fix\r\n", Serialcnt);
 								Serialcnt++;
 						}
 						else{
-								HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, 1); //GPS LED
-								printf("\r\n%d: Lat: %f %c, Lon: %f %c, Alt: %f m, Satellites: %d HDOP: %f\r\n",
-												Serialcnt, myData.latitude, myData.latSide, myData.longitude, myData.lonSide, myData.altitude, myData.satelliteCount, myData.hdop);
-								CheckGPS(myData.latitude, myData.longitude);
+							if(NowBusStopFlag == 0){
+								NowBusStopFlag = 1;
+								NowBusStop(myData.latitude, myData.longitude);
+								updateLCD();
+							}
+							HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, 1); //GPS LED
+//							printf("\r\n%d: Lat: %f %c, Lon: %f %c, Alt: %f m, Satellites: %d HDOP: %f\r\n",
+//											Serialcnt, myData.latitude, myData.latSide, myData.longitude, myData.lonSide, myData.altitude, myData.satelliteCount, myData.hdop);
+							CheckGPS(myData.latitude, myData.longitude);
 						}
 					}
 					if(HAL_GetTick() - ArriveTick >= 100){
@@ -909,48 +959,59 @@ int main(void) {
 		}
 
 		else{ //Remote Mode
-			uint8_t data[] = "1,604,1312";
-			uint8_t data4[] = "000044444@";
+			uint8_t data[] = "1,604,1315";
 			uint8_t data3[] = "000033333@";
+			uint8_t uartLoraFlag = 0;
 
 			while(1){
 				if (UART1_Rx_End) {
-					printf("Re:%s, %d!!!!\r\n", UART1_Rx_Buffer, strlen(UART1_Rx_Buffer));
+					//printf("Re:%s, %d!!!!\r\n", UART1_Rx_Buffer, strlen(UART1_Rx_Buffer));
+					char* token;
+
+					token = strtok(UART1_Rx_Buffer, "!");
+					strncpy(data, token, 10);
+					printf("\r\nRe:%s!!!!!\r\n\r\n", data);
+
+					token = strtok(NULL, "!");
+					strncpy(data3, token, 10);
+					printf("\r\nRe:%s!!!!!\r\n\r\n", data3);
+
 					for (int i = 0; i < 50; i++) {
 						UART1_Rx_Buffer[i] = '\0';
 					}
-					LoRa_SendData(UART1_Rx_Buffer, strlen((char*)UART1_Rx_Buffer));
+					//LoRa_SendData(UART1_Rx_Buffer, strlen((char*)UART1_Rx_Buffer));
 					UART1_Len = 0;
 					UART1_Rx_End = 0;
+					uartLoraFlag = 1;
+					asd = 0;
 				}
-				if (HAL_GetTick() - LoRaTick >= 2000) {
+				if (LoRaRxEnd) {
+					printf("LoRa : %s\r\n", LoRaRxData);
+					asd++;
+					for (int i = 0; i < 11; i++) {
+						LoRaRxData[i] = '\0';
+					}
+					LoRaLen = 0;
+					LoRaRxEnd = 0; // 수신 완료 플래그 리셋
+				}
+				if (HAL_GetTick() - LoRaTick >= 2000 && uartLoraFlag == 1) {
 					LoRaTick = HAL_GetTick();
 					if(asd < 2){
 						if(asd%2 == 0){
 							LoRa_SendData(data, sizeof(data)-1);
-							printf("%s\r\n", data);
+							//printf("%s\r\n", data);
 						}
 						else{
 							LoRa_SendData(data3, sizeof(data3)-1);
-							printf("%s\r\n", data3);
+							//printf("%s\r\n", data3);
 						}
-						asd++;
 					}
-					if(asd2 < 2){
-						if(asd2%2 == 0){
-							LoRa_SendData(data, sizeof(data)-1);
-							printf("%s\r\n", data);
-						}
-						else{
-							LoRa_SendData(data4, sizeof(data4)-1);
-							printf("%s\r\n", data4);
-						}
-						asd2++;
+					else{
+						uartLoraFlag = 0;
 					}
 				}
 			}
 		}
-
 //
 //		HAL_Delay(100);
 		/* USER CODE END WHILE */
@@ -1214,10 +1275,8 @@ static void MX_GPIO_Init(void) {
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	if (GPIO_Pin == GPIO_PIN_5) {
 		printf("0x020,10x03\r\n");
-		asd=0;
 	} else if (GPIO_Pin == GPIO_PIN_6) {
 		printf("0x021,10x03\r\n");
-		asd2=0;
 	} else if (GPIO_Pin == GPIO_PIN_7) {
 		printf("0x022,10x03\r\n");
 	} else if (GPIO_Pin == GPIO_PIN_0) {
