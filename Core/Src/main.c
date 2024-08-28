@@ -73,7 +73,7 @@ struct DataFlash {
 	char lati[16];
 	char longi[16];
 	uint8_t isPeople;
-} data[150] = {0};
+} data[150] = { 0 };
 
 int nowIdx = 0;
 
@@ -114,25 +114,24 @@ static void MX_USART3_UART_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
-{
-    oldPos = newPos; //keep track of the last position in the buffer
-    if(oldPos + Size > DataBuffer_SIZE){ //if the buffer is full, parse it, then reset the buffer
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
+	oldPos = newPos; //keep track of the last position in the buffer
+	if (oldPos + Size > DataBuffer_SIZE) { //if the buffer is full, parse it, then reset the buffer
 
-        uint16_t datatocopy = DataBuffer_SIZE-oldPos;  // find out how much space is left in the main buffer
-        memcpy ((uint8_t *)DataBuffer+oldPos, RxBuffer, datatocopy);  // copy data in that remaining space
+		uint16_t datatocopy = DataBuffer_SIZE - oldPos; // find out how much space is left in the main buffer
+		memcpy((uint8_t*) DataBuffer + oldPos, RxBuffer, datatocopy); // copy data in that remaining space
 
-        oldPos = 0;  // point to the start of the buffer
-        memcpy ((uint8_t *)DataBuffer, (uint8_t *)RxBuffer+datatocopy, (Size-datatocopy));  // copy the remaining data
-        newPos = (Size-datatocopy);  // update the position
-    }
-    else{
-        memcpy((uint8_t *)DataBuffer+oldPos, RxBuffer, Size); //copy received data to the buffer
-        newPos = Size+oldPos; //update buffer position
+		oldPos = 0;  // point to the start of the buffer
+		memcpy((uint8_t*) DataBuffer, (uint8_t*) RxBuffer + datatocopy,
+				(Size - datatocopy));  // copy the remaining data
+		newPos = (Size - datatocopy);  // update the position
+	} else {
+		memcpy((uint8_t*) DataBuffer + oldPos, RxBuffer, Size); //copy received data to the buffer
+		newPos = Size + oldPos; //update buffer position
 
-    }
-    HAL_UARTEx_ReceiveToIdle_DMA(&huart3, (uint8_t *)RxBuffer, RxBuffer_SIZE); //re-enable the DMA interrupt
-    __HAL_DMA_DISABLE_IT(&hdma_usart3_rx, DMA_IT_HT); //disable the half transfer interrupt
+	}
+	HAL_UARTEx_ReceiveToIdle_DMA(&huart3, (uint8_t*) RxBuffer, RxBuffer_SIZE); //re-enable the DMA interrupt
+	__HAL_DMA_DISABLE_IT(&hdma_usart3_rx, DMA_IT_HT); //disable the half transfer interrupt
 }
 
 //LCD ============================================
@@ -202,8 +201,8 @@ void LCD_Write_Info(struct DataFlash nowData, struct DataFlash nextData) {
 	for (int i = 0; i < 11; i++) {
 		LCD_SendCommand(LCD_ADDR, CMD_LCD_CURSOR_RIGHT);
 	}
-	printf("flag = %d\r\n", upDownFlag);
-	if(!upDownFlag)
+	//printf("flag = %d\r\n", upDownFlag);
+	if (!upDownFlag)
 		LCD_SendData(LCD_ADDR, 1);
 	else
 		LCD_SendData(LCD_ADDR, 2);
@@ -217,7 +216,7 @@ void LCD_Write_Info(struct DataFlash nowData, struct DataFlash nextData) {
 	for (int i = 0; i < 1; i++) {
 		LCD_SendCommand(LCD_ADDR, CMD_LCD_CURSOR_RIGHT);
 	}
-	if(!upDownFlag)
+	if (!upDownFlag)
 		LCD_SendData(LCD_ADDR, 1);
 	else
 		LCD_SendData(LCD_ADDR, 2);
@@ -227,7 +226,7 @@ void updateLCD() {
 	LCD_Write_Info(data[nowIdx], data[nowIdx + 1]);
 }
 
-void notGPSLCD(){
+void notGPSLCD() {
 	LCD_SendCommand(LCD_ADDR, CMD_LCD_CLEAR); //Clear
 	LCD_SendCommand(LCD_ADDR, CMD_LCD_CURSOR_LINE_1);
 	LCD_SendString(LCD_ADDR, data[0].busRouteno);
@@ -439,14 +438,14 @@ uint32_t CallData(uint32_t address) {
 	}
 }
 
-void Flash_Clear(){
-		Flash_Erase_Page(0x0800CC00);
-		Flash_Erase_Page(0x0800D000);
-		Flash_Erase_Page(0x0800D400);
-		Flash_Erase_Page(0x0800D800);
-		Flash_Erase_Page(0x0800DC00);
-		Flash_Erase_Page(0x0800E000);
-		Flash_Erase_Page(0x0800E400);
+void Flash_Clear() {
+	Flash_Erase_Page(0x0800CC00);
+	Flash_Erase_Page(0x0800D000);
+	Flash_Erase_Page(0x0800D400);
+	Flash_Erase_Page(0x0800D800);
+	Flash_Erase_Page(0x0800DC00);
+	Flash_Erase_Page(0x0800E000);
+	Flash_Erase_Page(0x0800E400);
 }
 
 // GPS=======================================================
@@ -519,10 +518,9 @@ void parseGPSData(uint8_t *buffer, uint16_t size) {
 
 		// ?��?��?�� 결과�??? ?��버그 출력
 		printf("\r\nLatitude: %.6f, Longitude: %.6f\r\n", la, lo);
-		if(la >= 200 || lo >= 200){
+		if (la >= 200 || lo >= 200) {
 			GPSLEDFlag = 0;
-		}
-		else{
+		} else {
 			GPSLEDFlag = 1;
 		}
 		CheckGPS(la, lo);
@@ -549,10 +547,10 @@ void CheckGPS(double nowLati, double nowLongi) {
 }
 double nowSum = 999;
 int idxMin = -1;
-void NowBusStop(double nowLati, double nowLongi){
+void NowBusStop(double nowLati, double nowLongi) {
 	double busStopLati = 0;
 	double busStopLongi = 0;
-	for(int i = 0;i<150;i++){
+	for (int i = 0; i < 150; i++) {
 		busStopLati = atof(data[i].lati);
 		busStopLongi = atof(data[i].longi);
 		if (nowLati >= (busStopLati - (0.000009 * GPSRange))
@@ -560,8 +558,11 @@ void NowBusStop(double nowLati, double nowLongi){
 			if (nowLongi >= (busStopLongi - (0.000011 * GPSRange))
 					&& nowLongi <= (busStopLongi + (0.000011 * GPSRange))) {
 				printf("\r\n%d!!!!!!!!\r\n\r\n", i);
-				if(nowSum > fabs(nowLati - busStopLati) + fabs(nowLongi - busStopLongi)){
-					nowSum = fabs(nowLati - busStopLati) + fabs(nowLongi - busStopLongi);
+				if (nowSum
+						> fabs(nowLati - busStopLati)
+								+ fabs(nowLongi - busStopLongi)) {
+					nowSum = fabs(nowLati - busStopLati)
+							+ fabs(nowLongi - busStopLongi);
 					idxMin = i;
 				}
 
@@ -569,7 +570,7 @@ void NowBusStop(double nowLati, double nowLongi){
 			}
 		}
 	}
-	if (idxMin != -1){
+	if (idxMin != -1) {
 		nowIdx = idxMin;
 		NowBusStopFlag = 1;
 	}
@@ -618,25 +619,25 @@ int routeNo = 0;
 int busNM = 0;
 int arsID = 0;
 
-void parseLora(uint8_t* loraData){
+void parseLora(uint8_t *loraData) {
 
-	if(loraData[0] == '0'){
+	if (loraData[0] == '0') {
 		char *token;
 
 		token = strtok(loraData, "@");
 		arsID = atoi(token);
 		printf("\r\narsID : %d!!!!!!\r\n\r\n", arsID);
 
-		for(int i = 0;i<150;i++){
-			if(atoi(data[i].busRouteno) != routeNo){
+		for (int i = 0; i < 150; i++) {
+			if (atoi(data[i].busRouteno) != routeNo) {
 				printf("\r\nNOT ROUTENO\r\n\r\n");
 				break;
 			}
-			if(atoi(data[i].busNM) != busNM){
+			if (atoi(data[i].busNM) != busNM) {
 				printf("\r\nNOT busNM\r\n\r\n");
 				break;
 			}
-			if(atoi(data[i].busStopID) == arsID){
+			if (atoi(data[i].busStopID) == arsID) {
 				data[i].isPeople = help;
 				printf("\r\n%d\r\n\r\n", i);
 //				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 1); //BUZZER
@@ -645,14 +646,15 @@ void parseLora(uint8_t* loraData){
 				break;
 			}
 		}
-	}
-	else{
+	} else {
 		help = loraData[0] - '0';
-		routeNo = (loraData[2]-'0') * 100 + (loraData[3]-'0') * 10 + (loraData[4] - '0');
-		busNM = (loraData[6]-'0') * 1000 + (loraData[7]-'0') * 100 + (loraData[8] - '0') * 10 + (loraData[9] - '0');
-		printf("\r\nhelp : %d, routeNo : %d, busNM : %d\r\n\r\n",help, routeNo, busNM);
+		routeNo = (loraData[2] - '0') * 100 + (loraData[3] - '0') * 10
+				+ (loraData[4] - '0');
+		busNM = (loraData[6] - '0') * 1000 + (loraData[7] - '0') * 100
+				+ (loraData[8] - '0') * 10 + (loraData[9] - '0');
+		printf("\r\nhelp : %d, routeNo : %d, busNM : %d\r\n\r\n", help, routeNo,
+				busNM);
 	}
-
 
 }
 
@@ -679,7 +681,6 @@ uint8_t dataReceived = 0;
 
 uint8_t modeFlag = 0;
 uint8_t pushingFlag = 0;
-
 
 int _write(int file, unsigned char *p, int len) {
 	if (UART_Print_Port == 0) {
@@ -712,49 +713,48 @@ uint32_t GPSFIXTick = 0;
 uint32_t ArriveTick = 0;
 uint32_t BtnTick = 0;
 
-
 int asd = 2;
 
 int helpBuzzer = 0;
 
+uint8_t LoRaModeFlag = 0;
 
 /* USER CODE END 0 */
 
 /**
-  * @brief  The application entry point.
-  * @retval int
-  */
-int main(void)
-{
+ * @brief  The application entry point.
+ * @retval int
+ */
+int main(void) {
 
-  /* USER CODE BEGIN 1 */
+	/* USER CODE BEGIN 1 */
 
-  /* USER CODE END 1 */
+	/* USER CODE END 1 */
 
-  /* MCU Configuration--------------------------------------------------------*/
+	/* MCU Configuration--------------------------------------------------------*/
 
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
+	/* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+	HAL_Init();
 
-  /* USER CODE BEGIN Init */
-  HAL_Delay(1000);
-  /* USER CODE END Init */
+	/* USER CODE BEGIN Init */
+	HAL_Delay(1000);
+	/* USER CODE END Init */
 
-  /* Configure the system clock */
-  SystemClock_Config();
+	/* Configure the system clock */
+	SystemClock_Config();
 
-  /* USER CODE BEGIN SysInit */
+	/* USER CODE BEGIN SysInit */
 
-  /* USER CODE END SysInit */
+	/* USER CODE END SysInit */
 
-  /* Initialize all configured peripherals */
-  MX_GPIO_Init();
-  MX_DMA_Init();
-  MX_I2C1_Init();
-  MX_USART1_UART_Init();
-  MX_USART2_UART_Init();
-  MX_USART3_UART_Init();
-  /* USER CODE BEGIN 2 */
+	/* Initialize all configured peripherals */
+	MX_GPIO_Init();
+	MX_DMA_Init();
+	MX_I2C1_Init();
+	MX_USART1_UART_Init();
+	MX_USART2_UART_Init();
+	MX_USART3_UART_Init();
+	/* USER CODE BEGIN 2 */
 	HAL_UART_Receive_IT(&huart1, UART1_Rx_Data, 1);
 	HAL_UART_Receive_IT(&huart2, LoRaRxData, 10);
 	HAL_UART_Receive_IT(&huart3, rxBuffer, 1);
@@ -787,13 +787,12 @@ int main(void)
 //	LCD_SendData(LCD_ADDR, 1);
 
 	//flash
-	uint32_t GPSRangeFlashAddress = 0x0800C400;  // ???��?�� ?��?��?�� 메모�???? 주소
+	uint32_t GPSRangeFlashAddress = 0x0800C400; // ???��?�� ?��?��?�� 메모�???? 주소
 	uint32_t ModeFlashAddress = 0x0800CB00;  // ???��?�� ?��?��?�� 메모�???? 주소
 	uint32_t DataFlashAddress = 0x0800CC00; // ???��?�� ?��?��?�� 메모�???? 주소
 	uint16_t InfoModeFlag = Flash_Read(ModeFlashAddress) & 0x0000FFFF;
 	GPSRange = Flash_Read(GPSRangeFlashAddress) & 0x0000FFFF;
 	printf("Range : %d!!!!!!!!!!!!!!!!\r\n", GPSRange);
-
 
 	//printf("ModeFlag:%d", InfoModeFlag);
 	if (InfoModeFlag >= 1) {
@@ -821,14 +820,12 @@ int main(void)
 		Flash_Lock();
 	}
 
-	HAL_UARTEx_ReceiveToIdle_DMA(&huart3, (uint8_t *)RxBuffer, RxBuffer_SIZE);
+	HAL_UARTEx_ReceiveToIdle_DMA(&huart3, (uint8_t*) RxBuffer, RxBuffer_SIZE);
 	__HAL_DMA_DISABLE_IT(&hdma_usart3_rx, DMA_IT_HT);
 	int Serialcnt = 0;
 
 	//LoRa ================================================================
 	SetMode(0);
-
-
 
 	//FW===================================================================
 	modeFlag = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_15);
@@ -841,11 +838,10 @@ int main(void)
 	uint8_t IOMode = 0; //0 : In, 1 : Out
 	uint8_t ArriveFlag = 0;
 
+	/* USER CODE END 2 */
 
-  /* USER CODE END 2 */
-
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
+	/* Infinite loop */
+	/* USER CODE BEGIN WHILE */
 	while (1) {
 //
 //
@@ -853,12 +849,12 @@ int main(void)
 //		HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_14); //GPS LED
 
 		if (!modeFlag) { //Local Mode
-			if (InfoModeFlag >= 1){
+			if (InfoModeFlag >= 1) {
 				notGPSLCD();
 			}
 			while (1) {
 				if (UART1_Rx_End) {
-					//printf("Echo\r\n");
+					printf("Echo\r\n");
 					if (!strcmp(UART1_Rx_Buffer, "Input")) {
 						Flash_Erase_Page(ModeFlashAddress);
 						Flash_Unlock();
@@ -877,7 +873,7 @@ int main(void)
 								UART1_Rx_Buffer);
 						//printf("Data\r\n");
 						printf("N\r\n");
-					} else if (!strncmp(UART1_Rx_Buffer, "range", 5)){
+					} else if (!strncmp(UART1_Rx_Buffer, "range", 5)) {
 						char *token;
 
 						token = strtok(UART1_Rx_Buffer, ",");
@@ -889,7 +885,7 @@ int main(void)
 						Flash_Write(GPSRangeFlashAddress, (uint8_t) GPSRange);
 						Flash_Lock();
 					}
-					//HAL_UART_Transmit(&huart1, UART1_Rx_Buffer, UART1_Len, 2);
+					HAL_UART_Transmit(&huart1, UART1_Rx_Buffer, UART1_Len, 2);
 					for (int i = 0; i < 50; i++) {
 						UART1_Rx_Buffer[i] = '\0';
 					}
@@ -897,28 +893,29 @@ int main(void)
 					UART1_Rx_End = 0;
 				}
 
+				if (LoRaRxEnd) {
+					printf("LoRa : %s, %d\r\n", LoRaRxData,
+							strlen(LoRaRxData));
+					parseLora(LoRaRxData);
+					LoRa_SendData(LoRaRxData, sizeof(LoRaRxData) - 1);
+					for (int i = 0; i < 11; i++) {
+						LoRaRxData[i] = '\0';
+					}
+					LoRaLen = 0;
+					LoRaRxEnd = 0; // ?��?�� ?���?? ?��?���?? 리셋
+				}
+
 				if (InfoModeFlag) { //?��?��모드?��?��
 					if (dataReceived) {
 						parseGPSData(rxBuffer, RX3_BUFFER_SIZE);
 						dataReceived = 0;
-					}
-					if (LoRaRxEnd) {
-						printf("LoRa : %s, %d\r\n", LoRaRxData, strlen(LoRaRxData));
-						parseLora(LoRaRxData);
-						LoRa_SendData(LoRaRxData, sizeof(LoRaRxData)-1);
-						for (int i = 0; i < 11; i++) {
-							LoRaRxData[i] = '\0';
-						}
-						LoRaLen = 0;
-						LoRaRxEnd = 0; // ?��?�� ?���?? ?��?���?? 리셋
-
 					}
 					if (HAL_GetTick() - GPSTick >= 1000) {
 						GPSTick = HAL_GetTick();
 						//printf("CNT : %d\r\n", checkGPSCnt);
 						if (checkGPSCnt >= 2) {
 							HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 0); //BUZZER
-							if(IOMode == 0){
+							if (IOMode == 0) {
 								LCD_Write_Arrive(data[nowIdx]);
 								HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 1); //BUZZER
 								ArriveFlag = 1;
@@ -927,10 +924,9 @@ int main(void)
 
 							HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_13); //Stop LED
 							IOMode = 1;
-						}
-						else {
+						} else {
 							HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 0); //BUZZER
-							if(IOMode == 1){
+							if (IOMode == 1) {
 								nowIdx++;
 								updateLCD();
 								HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 1); //BUZZER
@@ -946,18 +942,19 @@ int main(void)
 					if (HAL_GetTick() - GPSFIXTick >= 100) {
 						//printf("%s\r\n", DataBuffer);
 						nmea_parse(&myData, DataBuffer);
-						if(myData.fix == 0){
-								GPSFIXTick = HAL_GetTick();
-								HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_14); //GPS LED
-								//printf("%d: No fix\r\n", Serialcnt);
-								Serialcnt++;
-						}
-						else{
-							if(NowBusStopFlag == 0){
-								if(myData.latitude > 0 && myData.longitude > 0){
+						if (myData.fix == 0) {
+							GPSFIXTick = HAL_GetTick();
+							HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_14); //GPS LED
+							//printf("%d: No fix\r\n", Serialcnt);
+							Serialcnt++;
+						} else {
+							if (NowBusStopFlag == 0) {
+								if (myData.latitude > 0
+										&& myData.longitude > 0) {
 
 									//printf("%f, %f\r\n", myData.latitude, myData.longitude);
-									NowBusStop(myData.latitude, myData.longitude);
+									NowBusStop(myData.latitude,
+											myData.longitude);
 									updateLCD();
 								}
 							}
@@ -967,46 +964,47 @@ int main(void)
 							CheckGPS(myData.latitude, myData.longitude);
 						}
 					}
-					if (HAL_GetTick() - BtnTick >= 2000 && pushingFlag){
+					if (HAL_GetTick() - BtnTick >= 2000 && pushingFlag) {
 						pushingFlag = 0;
-						upDownFlag = (upDownFlag+1)%2;
+						upDownFlag = (upDownFlag + 1) % 2;
 						HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 1);
 						HAL_Delay(100);
 						HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 0);
 						updateLCD();
 					}
-					if(NowBusStopFlag){
-						if(HAL_GetTick() - ArriveTick >= 100){
+					if (NowBusStopFlag) {
+						if (HAL_GetTick() - ArriveTick >= 100) {
 							ArriveTick = HAL_GetTick();
-							if(data[nowIdx].isPeople == 1){
-								if(ArriveFlag == 1){
+							printf("isPeople : %d\r\n", data[nowIdx].isPeople);
+							if (data[nowIdx].isPeople == 1) {
+								if (ArriveFlag == 1) {
 									HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_11);
-								}
-								else{
+								} else {
 									HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, 1); //LAMP1
 								}
 							}
-							if(data[nowIdx].isPeople == 2){
-								if(ArriveFlag == 1){
+							if (data[nowIdx].isPeople == 2) {
+								if (ArriveFlag == 1) {
 									HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_11);
-									if(helpBuzzer % 2 == 0 && (helpBuzzer+1) % 5 && helpBuzzer < 9){
-										helpBuzzer++;
+									if (helpBuzzer % 2 == 0
+											&& (helpBuzzer + 1) % 5
+											&& helpBuzzer < 11) {
+
 										HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_8);
 									}
-								}
-								else{
+									helpBuzzer++;
+								} else {
 									HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, 1); //LAMP1
 								}
 							}
-							else{
+							if (data[nowIdx].isPeople == 0){
 								HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, 0); //LAMP1
 							}
 						}
 
-						if(data[nowIdx+1].isPeople == 1){
+						if (data[nowIdx + 1].isPeople >= 1) {
 							HAL_GPIO_WritePin(GPIOA, GPIO_PIN_12, 1); //LAMP2
-						}
-						else{
+						} else {
 							HAL_GPIO_WritePin(GPIOA, GPIO_PIN_12, 0); //LAMP2
 						}
 					}
@@ -1014,15 +1012,16 @@ int main(void)
 			}
 		}
 
-		else{ //Remote Mode
+		else { //Remote Mode
 			uint8_t data[] = "1,604,1315";
 			uint8_t data3[] = "000033333@";
 			uint8_t uartLoraFlag = 0;
 
-			while(1){
+			while (1) {
 				if (UART1_Rx_End) {
+
 					//printf("Re:%s, %d!!!!\r\n", UART1_Rx_Buffer, strlen(UART1_Rx_Buffer));
-					char* token;
+					char *token;
 
 					token = strtok(UART1_Rx_Buffer, "!");
 					strncpy(data, token, 10);
@@ -1052,19 +1051,17 @@ int main(void)
 				}
 				if (HAL_GetTick() - LoRaTick >= 3000 && uartLoraFlag == 1) {
 					LoRaTick = HAL_GetTick();
-					if(asd < 2){
-						if(asd%2 == 0){
+					if (asd < 2) {
+						if (asd % 2 == 0) {
 							printf("data : %s\r\n", data);
-							LoRa_SendData(data, sizeof(data)-1);
+							LoRa_SendData(data, sizeof(data) - 1);
 							//printf("%s\r\n", data);
-						}
-						else{
+						} else {
 							printf("data3 : %s\r\n", data3);
-							LoRa_SendData(data3, sizeof(data3)-1);
+							LoRa_SendData(data3, sizeof(data3) - 1);
 							//printf("%s\r\n", data3);
 						}
-					}
-					else{
+					} else {
 						uartLoraFlag = 0;
 					}
 				}
@@ -1072,359 +1069,332 @@ int main(void)
 		}
 //
 //		HAL_Delay(100);
-    /* USER CODE END WHILE */
+		/* USER CODE END WHILE */
 
-    /* USER CODE BEGIN 3 */
+		/* USER CODE BEGIN 3 */
 	}
-  /* USER CODE END 3 */
+	/* USER CODE END 3 */
 }
 
 /**
-  * @brief System Clock Configuration
-  * @retval None
-  */
-void SystemClock_Config(void)
-{
-  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
-  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+ * @brief System Clock Configuration
+ * @retval None
+ */
+void SystemClock_Config(void) {
+	RCC_OscInitTypeDef RCC_OscInitStruct = { 0 };
+	RCC_ClkInitTypeDef RCC_ClkInitStruct = { 0 };
 
-  /** Initializes the RCC Oscillators according to the specified parameters
-  * in the RCC_OscInitTypeDef structure.
-  */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
-  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI_DIV2;
-  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL4;
-  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
-  {
-    Error_Handler();
-  }
+	/** Initializes the RCC Oscillators according to the specified parameters
+	 * in the RCC_OscInitTypeDef structure.
+	 */
+	RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+	RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+	RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+	RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+	RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI_DIV2;
+	RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL4;
+	if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
+		Error_Handler();
+	}
 
-  /** Initializes the CPU, AHB and APB buses clocks
-  */
-  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
-                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
-  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
-  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+	/** Initializes the CPU, AHB and APB buses clocks
+	 */
+	RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK
+			| RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
+	RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+	RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+	RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
+	RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
-  {
-    Error_Handler();
-  }
+	if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK) {
+		Error_Handler();
+	}
 }
 
 /**
-  * @brief I2C1 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_I2C1_Init(void)
-{
+ * @brief I2C1 Initialization Function
+ * @param None
+ * @retval None
+ */
+static void MX_I2C1_Init(void) {
 
-  /* USER CODE BEGIN I2C1_Init 0 */
+	/* USER CODE BEGIN I2C1_Init 0 */
 
-  /* USER CODE END I2C1_Init 0 */
+	/* USER CODE END I2C1_Init 0 */
 
-  /* USER CODE BEGIN I2C1_Init 1 */
+	/* USER CODE BEGIN I2C1_Init 1 */
 
-  /* USER CODE END I2C1_Init 1 */
-  hi2c1.Instance = I2C1;
-  hi2c1.Init.ClockSpeed = 100000;
-  hi2c1.Init.DutyCycle = I2C_DUTYCYCLE_2;
-  hi2c1.Init.OwnAddress1 = 0;
-  hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
-  hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
-  hi2c1.Init.OwnAddress2 = 0;
-  hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
-  hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
-  if (HAL_I2C_Init(&hi2c1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN I2C1_Init 2 */
+	/* USER CODE END I2C1_Init 1 */
+	hi2c1.Instance = I2C1;
+	hi2c1.Init.ClockSpeed = 100000;
+	hi2c1.Init.DutyCycle = I2C_DUTYCYCLE_2;
+	hi2c1.Init.OwnAddress1 = 0;
+	hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+	hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+	hi2c1.Init.OwnAddress2 = 0;
+	hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+	hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+	if (HAL_I2C_Init(&hi2c1) != HAL_OK) {
+		Error_Handler();
+	}
+	/* USER CODE BEGIN I2C1_Init 2 */
 
-  /* USER CODE END I2C1_Init 2 */
+	/* USER CODE END I2C1_Init 2 */
 
 }
 
 /**
-  * @brief USART1 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_USART1_UART_Init(void)
-{
+ * @brief USART1 Initialization Function
+ * @param None
+ * @retval None
+ */
+static void MX_USART1_UART_Init(void) {
 
-  /* USER CODE BEGIN USART1_Init 0 */
+	/* USER CODE BEGIN USART1_Init 0 */
 
-  /* USER CODE END USART1_Init 0 */
+	/* USER CODE END USART1_Init 0 */
 
-  /* USER CODE BEGIN USART1_Init 1 */
+	/* USER CODE BEGIN USART1_Init 1 */
 
-  /* USER CODE END USART1_Init 1 */
-  huart1.Instance = USART1;
-  huart1.Init.BaudRate = 115200;
-  huart1.Init.WordLength = UART_WORDLENGTH_8B;
-  huart1.Init.StopBits = UART_STOPBITS_1;
-  huart1.Init.Parity = UART_PARITY_NONE;
-  huart1.Init.Mode = UART_MODE_TX_RX;
-  huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart1.Init.OverSampling = UART_OVERSAMPLING_16;
-  if (HAL_UART_Init(&huart1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN USART1_Init 2 */
+	/* USER CODE END USART1_Init 1 */
+	huart1.Instance = USART1;
+	huart1.Init.BaudRate = 115200;
+	huart1.Init.WordLength = UART_WORDLENGTH_8B;
+	huart1.Init.StopBits = UART_STOPBITS_1;
+	huart1.Init.Parity = UART_PARITY_NONE;
+	huart1.Init.Mode = UART_MODE_TX_RX;
+	huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+	huart1.Init.OverSampling = UART_OVERSAMPLING_16;
+	if (HAL_UART_Init(&huart1) != HAL_OK) {
+		Error_Handler();
+	}
+	/* USER CODE BEGIN USART1_Init 2 */
 
-  /* USER CODE END USART1_Init 2 */
+	/* USER CODE END USART1_Init 2 */
 
 }
 
 /**
-  * @brief USART2 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_USART2_UART_Init(void)
-{
+ * @brief USART2 Initialization Function
+ * @param None
+ * @retval None
+ */
+static void MX_USART2_UART_Init(void) {
 
-  /* USER CODE BEGIN USART2_Init 0 */
+	/* USER CODE BEGIN USART2_Init 0 */
 
-  /* USER CODE END USART2_Init 0 */
+	/* USER CODE END USART2_Init 0 */
 
-  /* USER CODE BEGIN USART2_Init 1 */
+	/* USER CODE BEGIN USART2_Init 1 */
 
-  /* USER CODE END USART2_Init 1 */
-  huart2.Instance = USART2;
-  huart2.Init.BaudRate = 9600;
-  huart2.Init.WordLength = UART_WORDLENGTH_8B;
-  huart2.Init.StopBits = UART_STOPBITS_1;
-  huart2.Init.Parity = UART_PARITY_NONE;
-  huart2.Init.Mode = UART_MODE_TX_RX;
-  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
-  if (HAL_UART_Init(&huart2) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN USART2_Init 2 */
+	/* USER CODE END USART2_Init 1 */
+	huart2.Instance = USART2;
+	huart2.Init.BaudRate = 9600;
+	huart2.Init.WordLength = UART_WORDLENGTH_8B;
+	huart2.Init.StopBits = UART_STOPBITS_1;
+	huart2.Init.Parity = UART_PARITY_NONE;
+	huart2.Init.Mode = UART_MODE_TX_RX;
+	huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+	huart2.Init.OverSampling = UART_OVERSAMPLING_16;
+	if (HAL_UART_Init(&huart2) != HAL_OK) {
+		Error_Handler();
+	}
+	/* USER CODE BEGIN USART2_Init 2 */
 
-  /* USER CODE END USART2_Init 2 */
+	/* USER CODE END USART2_Init 2 */
 
 }
 
 /**
-  * @brief USART3 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_USART3_UART_Init(void)
-{
+ * @brief USART3 Initialization Function
+ * @param None
+ * @retval None
+ */
+static void MX_USART3_UART_Init(void) {
 
-  /* USER CODE BEGIN USART3_Init 0 */
+	/* USER CODE BEGIN USART3_Init 0 */
 
-  /* USER CODE END USART3_Init 0 */
+	/* USER CODE END USART3_Init 0 */
 
-  /* USER CODE BEGIN USART3_Init 1 */
+	/* USER CODE BEGIN USART3_Init 1 */
 
-  /* USER CODE END USART3_Init 1 */
-  huart3.Instance = USART3;
-  huart3.Init.BaudRate = 230400;
-  huart3.Init.WordLength = UART_WORDLENGTH_8B;
-  huart3.Init.StopBits = UART_STOPBITS_1;
-  huart3.Init.Parity = UART_PARITY_NONE;
-  huart3.Init.Mode = UART_MODE_TX_RX;
-  huart3.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart3.Init.OverSampling = UART_OVERSAMPLING_16;
-  if (HAL_UART_Init(&huart3) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN USART3_Init 2 */
+	/* USER CODE END USART3_Init 1 */
+	huart3.Instance = USART3;
+	huart3.Init.BaudRate = 230400;
+	huart3.Init.WordLength = UART_WORDLENGTH_8B;
+	huart3.Init.StopBits = UART_STOPBITS_1;
+	huart3.Init.Parity = UART_PARITY_NONE;
+	huart3.Init.Mode = UART_MODE_TX_RX;
+	huart3.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+	huart3.Init.OverSampling = UART_OVERSAMPLING_16;
+	if (HAL_UART_Init(&huart3) != HAL_OK) {
+		Error_Handler();
+	}
+	/* USER CODE BEGIN USART3_Init 2 */
 
-  /* USER CODE END USART3_Init 2 */
+	/* USER CODE END USART3_Init 2 */
 
 }
 
 /**
-  * Enable DMA controller clock
-  */
-static void MX_DMA_Init(void)
-{
+ * Enable DMA controller clock
+ */
+static void MX_DMA_Init(void) {
 
-  /* DMA controller clock enable */
-  __HAL_RCC_DMA1_CLK_ENABLE();
+	/* DMA controller clock enable */
+	__HAL_RCC_DMA1_CLK_ENABLE();
 
-  /* DMA interrupt init */
-  /* DMA1_Channel3_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA1_Channel3_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(DMA1_Channel3_IRQn);
+	/* DMA interrupt init */
+	/* DMA1_Channel3_IRQn interrupt configuration */
+	HAL_NVIC_SetPriority(DMA1_Channel3_IRQn, 0, 0);
+	HAL_NVIC_EnableIRQ(DMA1_Channel3_IRQn);
 
 }
 
 /**
-  * @brief GPIO Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_GPIO_Init(void)
-{
-  GPIO_InitTypeDef GPIO_InitStruct = {0};
-/* USER CODE BEGIN MX_GPIO_Init_1 */
-/* USER CODE END MX_GPIO_Init_1 */
+ * @brief GPIO Initialization Function
+ * @param None
+ * @retval None
+ */
+static void MX_GPIO_Init(void) {
+	GPIO_InitTypeDef GPIO_InitStruct = { 0 };
+	/* USER CODE BEGIN MX_GPIO_Init_1 */
+	/* USER CODE END MX_GPIO_Init_1 */
 
-  /* GPIO Ports Clock Enable */
-  __HAL_RCC_GPIOA_CLK_ENABLE();
-  __HAL_RCC_GPIOB_CLK_ENABLE();
+	/* GPIO Ports Clock Enable */
+	__HAL_RCC_GPIOA_CLK_ENABLE();
+	__HAL_RCC_GPIOB_CLK_ENABLE();
 
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, LORA_M0_Pin|LORA_M1_Pin|LAMP2_Pin|LAMP1_Pin, GPIO_PIN_RESET);
+	/*Configure GPIO pin Output Level */
+	HAL_GPIO_WritePin(GPIOA, LORA_M0_Pin | LORA_M1_Pin | LAMP2_Pin | LAMP1_Pin,
+			GPIO_PIN_RESET);
 
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, STOP_LED_Pin|GPS_LED_Pin|BUZZER_Pin|DBG_LED_Pin, GPIO_PIN_RESET);
+	/*Configure GPIO pin Output Level */
+	HAL_GPIO_WritePin(GPIOB,
+			STOP_LED_Pin | GPS_LED_Pin | BUZZER_Pin | DBG_LED_Pin,
+			GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : LORA_M0_Pin LORA_M1_Pin LAMP2_Pin LAMP1_Pin */
-  GPIO_InitStruct.Pin = LORA_M0_Pin|LORA_M1_Pin|LAMP2_Pin|LAMP1_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+	/*Configure GPIO pins : LORA_M0_Pin LORA_M1_Pin LAMP2_Pin LAMP1_Pin */
+	GPIO_InitStruct.Pin = LORA_M0_Pin | LORA_M1_Pin | LAMP2_Pin | LAMP1_Pin;
+	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+	HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : LORA_AUX_Pin */
-  GPIO_InitStruct.Pin = LORA_AUX_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(LORA_AUX_GPIO_Port, &GPIO_InitStruct);
+	/*Configure GPIO pin : LORA_AUX_Pin */
+	GPIO_InitStruct.Pin = LORA_AUX_Pin;
+	GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	HAL_GPIO_Init(LORA_AUX_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : BTN1_Pin BTN2_Pin BTN3_Pin */
-  GPIO_InitStruct.Pin = BTN1_Pin|BTN2_Pin|BTN3_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+	/*Configure GPIO pins : BTN1_Pin BTN2_Pin BTN3_Pin */
+	GPIO_InitStruct.Pin = BTN1_Pin | BTN2_Pin | BTN3_Pin;
+	GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
+	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : BTN4_Pin BTN5_Pin */
-  GPIO_InitStruct.Pin = BTN4_Pin|BTN5_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+	/*Configure GPIO pins : BTN4_Pin BTN5_Pin */
+	GPIO_InitStruct.Pin = BTN4_Pin | BTN5_Pin;
+	GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
+	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : STOP_LED_Pin GPS_LED_Pin BUZZER_Pin DBG_LED_Pin */
-  GPIO_InitStruct.Pin = STOP_LED_Pin|GPS_LED_Pin|BUZZER_Pin|DBG_LED_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+	/*Configure GPIO pins : STOP_LED_Pin GPS_LED_Pin BUZZER_Pin DBG_LED_Pin */
+	GPIO_InitStruct.Pin = STOP_LED_Pin | GPS_LED_Pin | BUZZER_Pin | DBG_LED_Pin;
+	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+	HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : MODE_SLCT_Pin */
-  GPIO_InitStruct.Pin = MODE_SLCT_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
-  HAL_GPIO_Init(MODE_SLCT_GPIO_Port, &GPIO_InitStruct);
+	/*Configure GPIO pin : MODE_SLCT_Pin */
+	GPIO_InitStruct.Pin = MODE_SLCT_Pin;
+	GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+	GPIO_InitStruct.Pull = GPIO_PULLUP;
+	HAL_GPIO_Init(MODE_SLCT_GPIO_Port, &GPIO_InitStruct);
 
-  /* EXTI interrupt init*/
-  HAL_NVIC_SetPriority(EXTI0_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(EXTI0_IRQn);
+	/* EXTI interrupt init*/
+	HAL_NVIC_SetPriority(EXTI0_IRQn, 0, 0);
+	HAL_NVIC_EnableIRQ(EXTI0_IRQn);
 
-  HAL_NVIC_SetPriority(EXTI1_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(EXTI1_IRQn);
+	HAL_NVIC_SetPriority(EXTI1_IRQn, 0, 0);
+	HAL_NVIC_EnableIRQ(EXTI1_IRQn);
 
-  HAL_NVIC_SetPriority(EXTI9_5_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
+	HAL_NVIC_SetPriority(EXTI9_5_IRQn, 0, 0);
+	HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
 
-/* USER CODE BEGIN MX_GPIO_Init_2 */
-/* USER CODE END MX_GPIO_Init_2 */
+	/* USER CODE BEGIN MX_GPIO_Init_2 */
+	/* USER CODE END MX_GPIO_Init_2 */
 }
 
 /* USER CODE BEGIN 4 */
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	if (GPIO_Pin == GPIO_PIN_5) {
-		if(!modeFlag){ //LOCAL
-			if(!HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_5)){
+		if (!modeFlag) { //LOCAL
+			if (!HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_5)) {
 				BtnTick = HAL_GetTick();
 				pushingFlag = 1;
-			}
-			else{
+			} else {
 				pushingFlag = 0;
 			}
-		}
-		else{
-			if(!HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_5)){
+		} else {
+			if (!HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_5)) {
 				BtnTick = HAL_GetTick();
-			}
-			else{
-				if(HAL_GetTick() - BtnTick < 2000){
+			} else {
+				if (HAL_GetTick() - BtnTick < 2000) {
 					printf("0x020,10x03\r\n");
-				}
-				else if(HAL_GetTick() - BtnTick < 5000){
+				} else if (HAL_GetTick() - BtnTick < 5000) {
 					printf("0x020,20x03\r\n");
-				}
-				else{
+				} else {
 					printf("0x020,30x03\r\n");
 				}
 			}
 		}
 	} else if (GPIO_Pin == GPIO_PIN_6) {
-		if(!HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_6)){
+		if (!HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_6)) {
 			BtnTick = HAL_GetTick();
-		}
-		else{
-			if(HAL_GetTick() - BtnTick < 2000){
+		} else {
+			if (HAL_GetTick() - BtnTick < 2000) {
 				printf("0x021,10x03\r\n");
-			}
-			else if(HAL_GetTick() - BtnTick < 5000){
+			} else if (HAL_GetTick() - BtnTick < 5000) {
 				printf("0x021,20x03\r\n");
-			}
-			else{
+			} else {
 				printf("0x021,30x03\r\n");
 			}
 		}
 	} else if (GPIO_Pin == GPIO_PIN_7) {
-		if(!HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_7)){
+		if (!HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_7)) {
 			BtnTick = HAL_GetTick();
-		}
-		else{
-			if(HAL_GetTick() - BtnTick < 2000){
+		} else {
+			if (HAL_GetTick() - BtnTick < 2000) {
 				printf("0x022,10x03\r\n");
-			}
-			else if(HAL_GetTick() - BtnTick < 5000){
+			} else if (HAL_GetTick() - BtnTick < 5000) {
 				printf("0x022,20x03\r\n");
-			}
-			else{
+			} else {
 				printf("0x022,30x03\r\n");
 			}
 		}
 	} else if (GPIO_Pin == GPIO_PIN_0) {
-		if(!HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_0)){
+		if (!HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_0)) {
 			BtnTick = HAL_GetTick();
-		}
-		else{
-			if(HAL_GetTick() - BtnTick < 2000){
+		} else {
+			if (HAL_GetTick() - BtnTick < 2000) {
 				printf("0x023,10x03\r\n");
-			}
-			else if(HAL_GetTick() - BtnTick < 5000){
+			} else if (HAL_GetTick() - BtnTick < 5000) {
 				printf("0x023,20x03\r\n");
-			}
-			else{
+			} else {
 				printf("0x023,30x03\r\n");
 			}
 		}
 	} else if (GPIO_Pin == GPIO_PIN_1) {
-		if(!HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_1)){
+		if (!HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_1)) {
 			BtnTick = HAL_GetTick();
-		}
-		else{
-			if(HAL_GetTick() - BtnTick < 2000){
+		} else {
+			if (HAL_GetTick() - BtnTick < 2000) {
 				printf("0x024,10x03\r\n");
-			}
-			else if(HAL_GetTick() - BtnTick < 5000){
+			} else if (HAL_GetTick() - BtnTick < 5000) {
 				printf("0x024,20x03\r\n");
-			}
-			else{
+			} else {
 				printf("0x024,30x03\r\n");
 			}
 		}
@@ -1451,7 +1421,8 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 			if (UART1_Rx_Data[0] == 0x03) {
 				UART1_Rx_End = 1;
 				UART1_Chk = 0;
-			} else {
+			}
+			else {
 				UART1_Rx_Buffer[UART1_Len] = UART1_Rx_Data[0];
 				UART1_Len++;
 			}
@@ -1460,33 +1431,12 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 			UART1_Chk = 0;
 			break;
 		}
-		//HAL_UART_Transmit(&huart1, UART1_Rx_Data, 1, 10);
+		HAL_UART_Transmit(&huart1, UART1_Rx_Data, 1, 10);
 		HAL_UART_Receive_IT(&huart1, UART1_Rx_Data, 1);
 	} else if (huart->Instance == USART2) {
 		LoRaRxEnd = 1;
-		//printf("LoRaChk!!!!!!!!%s\r\n", LoRaRxData);
-		switch (LoRaChk) {
-		case 0:
-			if (LoRaRxData[0] == 0x02) {
-				LoRaChk = 1;
-
-			} else
-				LoRaChk = 0;
-			break;
-		case 1:
-			if (LoRaRxData[0] == 0x03) {
-				LoRaRxEnd = 1;
-				LoRaChk = 0;
-			} else {
-				LoRaRxBuffer[UART1_Len] = LoRaRxData[0];
-				LoRaLen++;
-			}
-			break;
-		default:
-			LoRaChk = 0;
-			break;
-		}
 		HAL_UART_Receive_IT(&huart2, LoRaRxData, 10);
+
 	} else if (huart->Instance == USART3) {
 		dataReceived = 1;
 	}
@@ -1495,17 +1445,16 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 /* USER CODE END 4 */
 
 /**
-  * @brief  This function is executed in case of error occurrence.
-  * @retval None
-  */
-void Error_Handler(void)
-{
-  /* USER CODE BEGIN Error_Handler_Debug */
+ * @brief  This function is executed in case of error occurrence.
+ * @retval None
+ */
+void Error_Handler(void) {
+	/* USER CODE BEGIN Error_Handler_Debug */
 	/* User can add his own implementation to report the HAL error return state */
 	__disable_irq();
 	while (1) {
 	}
-  /* USER CODE END Error_Handler_Debug */
+	/* USER CODE END Error_Handler_Debug */
 }
 
 #ifdef  USE_FULL_ASSERT
