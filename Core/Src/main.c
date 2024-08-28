@@ -411,7 +411,7 @@ void splitData(char *strData) {
 
 	token = strtok(NULL, ","); // StopID
 	strncpy(data[dataIdx].busStopID, token,
-			sizeof(data[dataIdx].busStopID) - 1);
+			5);
 
 	token = strtok(NULL, ","); // lati
 	strncpy(data[dataIdx].lati, token, sizeof(data[dataIdx].lati) - 1);
@@ -638,7 +638,7 @@ void parseLora(uint8_t *loraData) {
 				printf("\r\nNOT busNM\r\n\r\n");
 				break;
 			}
-			if (atoi(data[i].busStopID)/10 == arsID) {
+			if (atoi(data[i].busStopID) == arsID) {
 				data[i].isPeople = help;
 				printf("\r\n%d\r\n\r\n", i);
 //				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 1); //BUZZER
