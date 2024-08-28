@@ -63,6 +63,7 @@ I2C_HandleTypeDef hi2c1;
 UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
 UART_HandleTypeDef huart3;
+DMA_HandleTypeDef hdma_usart1_rx;
 DMA_HandleTypeDef hdma_usart3_rx;
 
 /* USER CODE BEGIN PV */
@@ -299,10 +300,10 @@ void Flash_Write(uint32_t address, uint8_t data) {
 }
 
 void Flash_Write_StrInt(uint32_t address, uint8_t *StrData) {
-	Flash_Unlock();  // ?��?��?�� 메모�???? ?��?��
+	Flash_Unlock();  // ?��?��?�� 메모�????? ?��?��
 	uint16_t value = (uint16_t) strtol((const char*) StrData, NULL, 10);
 	Flash_Write(address, value);  // ?��?�� 값을 ?��?��?�� 메모리에 ???��
-	Flash_Lock();  // ?��?��?�� 메모�???? ?���????
+	Flash_Lock();  // ?��?��?�� 메모�????? ?���?????
 }
 
 uint32_t Flash_Write_Char(uint32_t address, uint8_t CharData) {
@@ -380,22 +381,22 @@ uint32_t Flash_Write_Data(uint32_t address, uint8_t *StrData) {
 }
 
 uint16_t Flash_Read(uint32_t address) {
-	return *(__IO uint16_t*) address; // �?????��?�� ?��?��?�� 메모�???? 주소?��?�� ?��?��?�� ?���????
+	return *(__IO uint16_t*) address; // �??????��?�� ?��?��?�� 메모�????? 주소?��?�� ?��?��?�� ?���?????
 }
 
 void Flash_Erase_Page(uint32_t address) {
-	Flash_Unlock();  // ?��?��?�� 메모�???? ?��?��
+	Flash_Unlock();  // ?��?��?�� 메모�????? ?��?��
 
 	FLASH->CR |= FLASH_CR_PER;   // Page Erase 비트 ?��?��
-	FLASH->AR = address;         // �?????�� ?��?���?????�� 주소 ?��?��
+	FLASH->AR = address;         // �??????�� ?��?���??????�� 주소 ?��?��
 	FLASH->CR |= FLASH_CR_STRT;  // Erase ?��?��
 
 	while (FLASH->SR & FLASH_SR_BSY)
-		;  // ?��?��?�� ?��료될 ?��까�? ??�????
+		;  // ?��?��?�� ?��료될 ?��까�? ??�?????
 
 	FLASH->CR &= ~FLASH_CR_PER;  // Page Erase 비트 ?��?��
 
-	Flash_Lock();  // ?��?��?�� 메모�???? ?���????
+	Flash_Lock();  // ?��?��?�� 메모�????? ?���?????
 }
 
 void splitData(char *strData) {
@@ -458,22 +459,22 @@ double convertToDecimalDegrees(const char *coordinate, char type) {
 	double decimalDegrees;
 
 	if (type == 'L') { // Latitude
-		// �?? ?�� ?���?? (?��)
+		// �??? ?�� ?���??? (?��)
 		degrees = (coordinate[0] - '0') * 10 + (coordinate[1] - '0'); // dd
-		// ?��머�? �??�?? (�??)
+		// ?��머�? �???�??? (�???)
 		minutes = atof(coordinate + 2); // mm.mmmm
 	} else if (type == 'G') { // Longitude
-		// �?? ?�� ?���?? (?��)
+		// �??? ?�� ?���??? (?��)
 		degrees = (coordinate[0] - '0') * 100 + (coordinate[1] - '0') * 10
 				+ (coordinate[2] - '0'); // ddd
-		// ?��머�? �??�?? (�??)
+		// ?��머�? �???�??? (�???)
 		minutes = atof(coordinate + 3); // mm.mmmm
 	} else {
 		printf("Invalid type\n");
 		return;
 	}
 
-	// ?��?��?�� �??�?? 계산
+	// ?��?��?�� �???�??? 계산
 	decimalDegrees = degrees + (minutes / 60.0);
 
 	return decimalDegrees;
@@ -483,15 +484,15 @@ void parseGPSData(uint8_t *buffer, uint16_t size) {
 	char *nmeaGGA = NULL;
 	double la, lo;
 	//xprintf("%s", (char*)buffer);
-	// DMA 버퍼?��?�� $GPGGA 문자?��?�� �????��
+	// DMA 버퍼?��?�� $GPGGA 문자?��?�� �?????��
 	nmeaGGA = strstr((char*) buffer, "GLL");
 	if (nmeaGGA != NULL) {
 		char *token;
 
-		// NMEA 메시�??? ?��?��?��
+		// NMEA 메시�???? ?��?��?��
 		token = strtok(nmeaGGA, ",");
 
-//        // UTC ?���??? (무시)
+//        // UTC ?���???? (무시)
 //        token = strtok(NULL, ",");
 
 		// ?��?��
@@ -516,7 +517,7 @@ void parseGPSData(uint8_t *buffer, uint16_t size) {
 		// E/W ?��?��
 		token = strtok(NULL, ",");
 
-		// ?��?��?�� 결과�??? ?��버그 출력
+		// ?��?��?�� 결과�???? ?��버그 출력
 		printf("\r\nLatitude: %.6f, Longitude: %.6f\r\n", la, lo);
 		if (la >= 200 || lo >= 200) {
 			GPSLEDFlag = 0;
@@ -579,9 +580,9 @@ void NowBusStop(double nowLati, double nowLongi) {
 //LoRa
 #define LoRa_RX_BUFFER_SIZE 64
 
-uint8_t LoRaRxBuffer[LoRa_RX_BUFFER_SIZE]; // ?��?�� ?��?��?���?? ???��?�� 버퍼
-volatile uint8_t LoRaRxEnd = 0; // ?��?��?�� ?��?�� ?���?? ?��?���??
-uint8_t LoRaRxData[11]; // ?��?�� ?��?��?���?? ???��?�� 버퍼
+uint8_t LoRaRxBuffer[LoRa_RX_BUFFER_SIZE]; // ?��?�� ?��?��?���??? ???��?�� 버퍼
+volatile uint8_t LoRaRxEnd = 0; // ?��?��?�� ?��?�� ?���??? ?��?���???
+uint8_t LoRaRxData[11]; // ?��?�� ?��?��?���??? ???��?�� 버퍼
 uint8_t LoRaLen = 0;
 
 void SetMode(uint8_t mode) {
@@ -606,7 +607,7 @@ void SetMode(uint8_t mode) {
 }
 
 void LoRa_SendData(uint8_t *data, uint16_t length) {
-	// AUX ???�� HIGH ?��?��?���?? ?��?��?��?�� 모듈?�� �??비되?��?���?? ?��?��
+	// AUX ???�� HIGH ?��?��?���??? ?��?��?��?�� 모듈?�� �???비되?��?���??? ?��?��
 	while (HAL_GPIO_ReadPin(LORA_AUX_GPIO_Port, LORA_AUX_Pin) == GPIO_PIN_RESET)
 		;
 
@@ -630,14 +631,14 @@ void parseLora(uint8_t *loraData) {
 
 		for (int i = 0; i < 150; i++) {
 			if (atoi(data[i].busRouteno) != routeNo) {
-				printf("\r\nNOT ROUTENO\r\n\r\n");
+				printf("\r\nNOT ROUTENO, %d\r\n\r\n",i);
 				break;
 			}
 			if (atoi(data[i].busNM) != busNM) {
 				printf("\r\nNOT busNM\r\n\r\n");
 				break;
 			}
-			if (atoi(data[i].busStopID) == arsID) {
+			if (atoi(data[i].busStopID)/10 == arsID) {
 				data[i].isPeople = help;
 				printf("\r\n%d\r\n\r\n", i);
 //				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 1); //BUZZER
@@ -722,42 +723,43 @@ uint8_t LoRaModeFlag = 0;
 /* USER CODE END 0 */
 
 /**
- * @brief  The application entry point.
- * @retval int
- */
-int main(void) {
+  * @brief  The application entry point.
+  * @retval int
+  */
+int main(void)
+{
 
-	/* USER CODE BEGIN 1 */
+  /* USER CODE BEGIN 1 */
 
-	/* USER CODE END 1 */
+  /* USER CODE END 1 */
 
-	/* MCU Configuration--------------------------------------------------------*/
+  /* MCU Configuration--------------------------------------------------------*/
 
-	/* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-	HAL_Init();
+  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+  HAL_Init();
 
-	/* USER CODE BEGIN Init */
+  /* USER CODE BEGIN Init */
 	HAL_Delay(1000);
-	/* USER CODE END Init */
+  /* USER CODE END Init */
 
-	/* Configure the system clock */
-	SystemClock_Config();
+  /* Configure the system clock */
+  SystemClock_Config();
 
-	/* USER CODE BEGIN SysInit */
+  /* USER CODE BEGIN SysInit */
 
-	/* USER CODE END SysInit */
+  /* USER CODE END SysInit */
 
-	/* Initialize all configured peripherals */
-	MX_GPIO_Init();
-	MX_DMA_Init();
-	MX_I2C1_Init();
-	MX_USART1_UART_Init();
-	MX_USART2_UART_Init();
-	MX_USART3_UART_Init();
-	/* USER CODE BEGIN 2 */
-	HAL_UART_Receive_IT(&huart1, UART1_Rx_Data, 1);
+  /* Initialize all configured peripherals */
+  MX_GPIO_Init();
+  MX_DMA_Init();
+  MX_I2C1_Init();
+  MX_USART1_UART_Init();
+  MX_USART2_UART_Init();
+  MX_USART3_UART_Init();
+  /* USER CODE BEGIN 2 */
+	HAL_UART_Receive_DMA(&huart1, UART1_Rx_Buffer, 20);
 	HAL_UART_Receive_IT(&huart2, LoRaRxData, 10);
-	HAL_UART_Receive_IT(&huart3, rxBuffer, 1);
+	HAL_UART_Receive_DMA(&huart3, RxBuffer, RxBuffer_SIZE);
 	setvbuf(stdout, NULL, _IONBF, 0);
 	//	printf("HELL WORLD\r\n");
 	LCD_Init(LCD_ADDR);
@@ -787,14 +789,14 @@ int main(void) {
 //	LCD_SendData(LCD_ADDR, 1);
 
 	//flash
-	uint32_t GPSRangeFlashAddress = 0x0800C400; // ???��?�� ?��?��?�� 메모�???? 주소
-	uint32_t ModeFlashAddress = 0x0800CB00;  // ???��?�� ?��?��?�� 메모�???? 주소
-	uint32_t DataFlashAddress = 0x0800CC00; // ???��?�� ?��?��?�� 메모�???? 주소
+	uint32_t GPSRangeFlashAddress = 0x0800C400; // ???��?�� ?��?��?�� 메모�????? 주소
+	uint32_t ModeFlashAddress = 0x0800CB00;  // ???��?�� ?��?��?�� 메모�????? 주소
+	uint32_t DataFlashAddress = 0x0800CC00; // ???��?�� ?��?��?�� 메모�????? 주소
 	uint16_t InfoModeFlag = Flash_Read(ModeFlashAddress) & 0x0000FFFF;
 	GPSRange = Flash_Read(GPSRangeFlashAddress) & 0x0000FFFF;
 	printf("Range : %d!!!!!!!!!!!!!!!!\r\n", GPSRange);
 
-	//printf("ModeFlag:%d", InfoModeFlag);
+	printf("ModeFlag:%d", InfoModeFlag);
 	if (InfoModeFlag >= 1) {
 		DataFlashAddress = CallData(DataFlashAddress);
 //		printf("\r\nbusStopID = %s\r\n\r\n", data[51].busRouteno);
@@ -820,8 +822,8 @@ int main(void) {
 		Flash_Lock();
 	}
 
-	HAL_UARTEx_ReceiveToIdle_DMA(&huart3, (uint8_t*) RxBuffer, RxBuffer_SIZE);
-	__HAL_DMA_DISABLE_IT(&hdma_usart3_rx, DMA_IT_HT);
+//	HAL_UARTEx_ReceiveToIdle_DMA(&huart3, (uint8_t*) RxBuffer, RxBuffer_SIZE);
+//	__HAL_DMA_DISABLE_IT(&hdma_usart3_rx, DMA_IT_HT);
 	int Serialcnt = 0;
 
 	//LoRa ================================================================
@@ -838,10 +840,10 @@ int main(void) {
 	uint8_t IOMode = 0; //0 : In, 1 : Out
 	uint8_t ArriveFlag = 0;
 
-	/* USER CODE END 2 */
+  /* USER CODE END 2 */
 
-	/* Infinite loop */
-	/* USER CODE BEGIN WHILE */
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
 	while (1) {
 //
 //
@@ -854,20 +856,20 @@ int main(void) {
 			}
 			while (1) {
 				if (UART1_Rx_End) {
-					printf("Echo\r\n");
-					if (!strcmp(UART1_Rx_Buffer, "Input")) {
+					//printf("Echo: %s\r\n", UART1_Rx_Buffer);
+					if (!strncmp(UART1_Rx_Buffer, "Input", 5)) {
 						Flash_Erase_Page(ModeFlashAddress);
 						Flash_Unlock();
 						Flash_Write(ModeFlashAddress, (uint8_t) 0);
 						Flash_Lock();
 						Flash_Clear();
-					} else if (!strcmp(UART1_Rx_Buffer, "OutPut")) {
+					} else if (!strncmp(UART1_Rx_Buffer, "OutPut", 6)) {
 						Flash_Erase_Page(ModeFlashAddress);
 						Flash_Unlock();
 						Flash_Write(ModeFlashAddress, 1);
 						Flash_Lock();
 					} else if ((!strncmp(UART1_Rx_Buffer, "Data", 4)
-							|| !strncmp(UART1_Rx_Buffer, "data", 4))
+							|| !strncmp(UART1_Rx_Buffer, "d", 1))
 							&& InfoModeFlag == 0) {
 						DataFlashAddress = Flash_Write_Data(DataFlashAddress,
 								UART1_Rx_Buffer);
@@ -902,7 +904,7 @@ int main(void) {
 						LoRaRxData[i] = '\0';
 					}
 					LoRaLen = 0;
-					LoRaRxEnd = 0; // ?��?�� ?���?? ?��?���?? 리셋
+					LoRaRxEnd = 0; // ?��?�� ?���??? ?��?���??? 리셋
 				}
 
 				if (InfoModeFlag) { //?��?��모드?��?��
@@ -1047,7 +1049,7 @@ int main(void) {
 						LoRaRxData[i] = '\0';
 					}
 					LoRaLen = 0;
-					LoRaRxEnd = 0; // ?��?�� ?���?? ?��?���?? 리셋
+					LoRaRxEnd = 0; // ?��?�� ?���??? ?��?���??? 리셋
 				}
 				if (HAL_GetTick() - LoRaTick >= 3000 && uartLoraFlag == 1) {
 					LoRaTick = HAL_GetTick();
@@ -1069,261 +1071,274 @@ int main(void) {
 		}
 //
 //		HAL_Delay(100);
-		/* USER CODE END WHILE */
+    /* USER CODE END WHILE */
 
-		/* USER CODE BEGIN 3 */
+    /* USER CODE BEGIN 3 */
 	}
-	/* USER CODE END 3 */
+  /* USER CODE END 3 */
 }
 
 /**
- * @brief System Clock Configuration
- * @retval None
- */
-void SystemClock_Config(void) {
-	RCC_OscInitTypeDef RCC_OscInitStruct = { 0 };
-	RCC_ClkInitTypeDef RCC_ClkInitStruct = { 0 };
+  * @brief System Clock Configuration
+  * @retval None
+  */
+void SystemClock_Config(void)
+{
+  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
-	/** Initializes the RCC Oscillators according to the specified parameters
-	 * in the RCC_OscInitTypeDef structure.
-	 */
-	RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
-	RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-	RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-	RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-	RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI_DIV2;
-	RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL4;
-	if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
-		Error_Handler();
-	}
+  /** Initializes the RCC Oscillators according to the specified parameters
+  * in the RCC_OscInitTypeDef structure.
+  */
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI_DIV2;
+  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL4;
+  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+  {
+    Error_Handler();
+  }
 
-	/** Initializes the CPU, AHB and APB buses clocks
-	 */
-	RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK
-			| RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
-	RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
-	RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-	RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
-	RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+  /** Initializes the CPU, AHB and APB buses clocks
+  */
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
+                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
-	if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK) {
-		Error_Handler();
-	}
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
+  {
+    Error_Handler();
+  }
 }
 
 /**
- * @brief I2C1 Initialization Function
- * @param None
- * @retval None
- */
-static void MX_I2C1_Init(void) {
+  * @brief I2C1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_I2C1_Init(void)
+{
 
-	/* USER CODE BEGIN I2C1_Init 0 */
+  /* USER CODE BEGIN I2C1_Init 0 */
 
-	/* USER CODE END I2C1_Init 0 */
+  /* USER CODE END I2C1_Init 0 */
 
-	/* USER CODE BEGIN I2C1_Init 1 */
+  /* USER CODE BEGIN I2C1_Init 1 */
 
-	/* USER CODE END I2C1_Init 1 */
-	hi2c1.Instance = I2C1;
-	hi2c1.Init.ClockSpeed = 100000;
-	hi2c1.Init.DutyCycle = I2C_DUTYCYCLE_2;
-	hi2c1.Init.OwnAddress1 = 0;
-	hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
-	hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
-	hi2c1.Init.OwnAddress2 = 0;
-	hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
-	hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
-	if (HAL_I2C_Init(&hi2c1) != HAL_OK) {
-		Error_Handler();
-	}
-	/* USER CODE BEGIN I2C1_Init 2 */
+  /* USER CODE END I2C1_Init 1 */
+  hi2c1.Instance = I2C1;
+  hi2c1.Init.ClockSpeed = 100000;
+  hi2c1.Init.DutyCycle = I2C_DUTYCYCLE_2;
+  hi2c1.Init.OwnAddress1 = 0;
+  hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+  hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+  hi2c1.Init.OwnAddress2 = 0;
+  hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+  hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+  if (HAL_I2C_Init(&hi2c1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN I2C1_Init 2 */
 
-	/* USER CODE END I2C1_Init 2 */
-
-}
-
-/**
- * @brief USART1 Initialization Function
- * @param None
- * @retval None
- */
-static void MX_USART1_UART_Init(void) {
-
-	/* USER CODE BEGIN USART1_Init 0 */
-
-	/* USER CODE END USART1_Init 0 */
-
-	/* USER CODE BEGIN USART1_Init 1 */
-
-	/* USER CODE END USART1_Init 1 */
-	huart1.Instance = USART1;
-	huart1.Init.BaudRate = 115200;
-	huart1.Init.WordLength = UART_WORDLENGTH_8B;
-	huart1.Init.StopBits = UART_STOPBITS_1;
-	huart1.Init.Parity = UART_PARITY_NONE;
-	huart1.Init.Mode = UART_MODE_TX_RX;
-	huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-	huart1.Init.OverSampling = UART_OVERSAMPLING_16;
-	if (HAL_UART_Init(&huart1) != HAL_OK) {
-		Error_Handler();
-	}
-	/* USER CODE BEGIN USART1_Init 2 */
-
-	/* USER CODE END USART1_Init 2 */
+  /* USER CODE END I2C1_Init 2 */
 
 }
 
 /**
- * @brief USART2 Initialization Function
- * @param None
- * @retval None
- */
-static void MX_USART2_UART_Init(void) {
+  * @brief USART1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART1_UART_Init(void)
+{
 
-	/* USER CODE BEGIN USART2_Init 0 */
+  /* USER CODE BEGIN USART1_Init 0 */
 
-	/* USER CODE END USART2_Init 0 */
+  /* USER CODE END USART1_Init 0 */
 
-	/* USER CODE BEGIN USART2_Init 1 */
+  /* USER CODE BEGIN USART1_Init 1 */
 
-	/* USER CODE END USART2_Init 1 */
-	huart2.Instance = USART2;
-	huart2.Init.BaudRate = 9600;
-	huart2.Init.WordLength = UART_WORDLENGTH_8B;
-	huart2.Init.StopBits = UART_STOPBITS_1;
-	huart2.Init.Parity = UART_PARITY_NONE;
-	huart2.Init.Mode = UART_MODE_TX_RX;
-	huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-	huart2.Init.OverSampling = UART_OVERSAMPLING_16;
-	if (HAL_UART_Init(&huart2) != HAL_OK) {
-		Error_Handler();
-	}
-	/* USER CODE BEGIN USART2_Init 2 */
+  /* USER CODE END USART1_Init 1 */
+  huart1.Instance = USART1;
+  huart1.Init.BaudRate = 115200;
+  huart1.Init.WordLength = UART_WORDLENGTH_8B;
+  huart1.Init.StopBits = UART_STOPBITS_1;
+  huart1.Init.Parity = UART_PARITY_NONE;
+  huart1.Init.Mode = UART_MODE_TX_RX;
+  huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart1.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART1_Init 2 */
 
-	/* USER CODE END USART2_Init 2 */
-
-}
-
-/**
- * @brief USART3 Initialization Function
- * @param None
- * @retval None
- */
-static void MX_USART3_UART_Init(void) {
-
-	/* USER CODE BEGIN USART3_Init 0 */
-
-	/* USER CODE END USART3_Init 0 */
-
-	/* USER CODE BEGIN USART3_Init 1 */
-
-	/* USER CODE END USART3_Init 1 */
-	huart3.Instance = USART3;
-	huart3.Init.BaudRate = 230400;
-	huart3.Init.WordLength = UART_WORDLENGTH_8B;
-	huart3.Init.StopBits = UART_STOPBITS_1;
-	huart3.Init.Parity = UART_PARITY_NONE;
-	huart3.Init.Mode = UART_MODE_TX_RX;
-	huart3.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-	huart3.Init.OverSampling = UART_OVERSAMPLING_16;
-	if (HAL_UART_Init(&huart3) != HAL_OK) {
-		Error_Handler();
-	}
-	/* USER CODE BEGIN USART3_Init 2 */
-
-	/* USER CODE END USART3_Init 2 */
+  /* USER CODE END USART1_Init 2 */
 
 }
 
 /**
- * Enable DMA controller clock
- */
-static void MX_DMA_Init(void) {
+  * @brief USART2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART2_UART_Init(void)
+{
 
-	/* DMA controller clock enable */
-	__HAL_RCC_DMA1_CLK_ENABLE();
+  /* USER CODE BEGIN USART2_Init 0 */
 
-	/* DMA interrupt init */
-	/* DMA1_Channel3_IRQn interrupt configuration */
-	HAL_NVIC_SetPriority(DMA1_Channel3_IRQn, 0, 0);
-	HAL_NVIC_EnableIRQ(DMA1_Channel3_IRQn);
+  /* USER CODE END USART2_Init 0 */
+
+  /* USER CODE BEGIN USART2_Init 1 */
+
+  /* USER CODE END USART2_Init 1 */
+  huart2.Instance = USART2;
+  huart2.Init.BaudRate = 9600;
+  huart2.Init.WordLength = UART_WORDLENGTH_8B;
+  huart2.Init.StopBits = UART_STOPBITS_1;
+  huart2.Init.Parity = UART_PARITY_NONE;
+  huart2.Init.Mode = UART_MODE_TX_RX;
+  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART2_Init 2 */
+
+  /* USER CODE END USART2_Init 2 */
 
 }
 
 /**
- * @brief GPIO Initialization Function
- * @param None
- * @retval None
- */
-static void MX_GPIO_Init(void) {
-	GPIO_InitTypeDef GPIO_InitStruct = { 0 };
-	/* USER CODE BEGIN MX_GPIO_Init_1 */
-	/* USER CODE END MX_GPIO_Init_1 */
+  * @brief USART3 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART3_UART_Init(void)
+{
 
-	/* GPIO Ports Clock Enable */
-	__HAL_RCC_GPIOA_CLK_ENABLE();
-	__HAL_RCC_GPIOB_CLK_ENABLE();
+  /* USER CODE BEGIN USART3_Init 0 */
 
-	/*Configure GPIO pin Output Level */
-	HAL_GPIO_WritePin(GPIOA, LORA_M0_Pin | LORA_M1_Pin | LAMP2_Pin | LAMP1_Pin,
-			GPIO_PIN_RESET);
+  /* USER CODE END USART3_Init 0 */
 
-	/*Configure GPIO pin Output Level */
-	HAL_GPIO_WritePin(GPIOB,
-			STOP_LED_Pin | GPS_LED_Pin | BUZZER_Pin | DBG_LED_Pin,
-			GPIO_PIN_RESET);
+  /* USER CODE BEGIN USART3_Init 1 */
 
-	/*Configure GPIO pins : LORA_M0_Pin LORA_M1_Pin LAMP2_Pin LAMP1_Pin */
-	GPIO_InitStruct.Pin = LORA_M0_Pin | LORA_M1_Pin | LAMP2_Pin | LAMP1_Pin;
-	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-	GPIO_InitStruct.Pull = GPIO_NOPULL;
-	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-	HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  /* USER CODE END USART3_Init 1 */
+  huart3.Instance = USART3;
+  huart3.Init.BaudRate = 230400;
+  huart3.Init.WordLength = UART_WORDLENGTH_8B;
+  huart3.Init.StopBits = UART_STOPBITS_1;
+  huart3.Init.Parity = UART_PARITY_NONE;
+  huart3.Init.Mode = UART_MODE_TX_RX;
+  huart3.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart3.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART3_Init 2 */
 
-	/*Configure GPIO pin : LORA_AUX_Pin */
-	GPIO_InitStruct.Pin = LORA_AUX_Pin;
-	GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-	GPIO_InitStruct.Pull = GPIO_NOPULL;
-	HAL_GPIO_Init(LORA_AUX_GPIO_Port, &GPIO_InitStruct);
+  /* USER CODE END USART3_Init 2 */
 
-	/*Configure GPIO pins : BTN1_Pin BTN2_Pin BTN3_Pin */
-	GPIO_InitStruct.Pin = BTN1_Pin | BTN2_Pin | BTN3_Pin;
-	GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
-	GPIO_InitStruct.Pull = GPIO_NOPULL;
-	HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+}
 
-	/*Configure GPIO pins : BTN4_Pin BTN5_Pin */
-	GPIO_InitStruct.Pin = BTN4_Pin | BTN5_Pin;
-	GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
-	GPIO_InitStruct.Pull = GPIO_NOPULL;
-	HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+/**
+  * Enable DMA controller clock
+  */
+static void MX_DMA_Init(void)
+{
 
-	/*Configure GPIO pins : STOP_LED_Pin GPS_LED_Pin BUZZER_Pin DBG_LED_Pin */
-	GPIO_InitStruct.Pin = STOP_LED_Pin | GPS_LED_Pin | BUZZER_Pin | DBG_LED_Pin;
-	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-	GPIO_InitStruct.Pull = GPIO_NOPULL;
-	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-	HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+  /* DMA controller clock enable */
+  __HAL_RCC_DMA1_CLK_ENABLE();
 
-	/*Configure GPIO pin : MODE_SLCT_Pin */
-	GPIO_InitStruct.Pin = MODE_SLCT_Pin;
-	GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-	GPIO_InitStruct.Pull = GPIO_PULLUP;
-	HAL_GPIO_Init(MODE_SLCT_GPIO_Port, &GPIO_InitStruct);
+  /* DMA interrupt init */
+  /* DMA1_Channel3_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel3_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel3_IRQn);
+  /* DMA1_Channel5_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel5_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel5_IRQn);
 
-	/* EXTI interrupt init*/
-	HAL_NVIC_SetPriority(EXTI0_IRQn, 0, 0);
-	HAL_NVIC_EnableIRQ(EXTI0_IRQn);
+}
 
-	HAL_NVIC_SetPriority(EXTI1_IRQn, 0, 0);
-	HAL_NVIC_EnableIRQ(EXTI1_IRQn);
+/**
+  * @brief GPIO Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_GPIO_Init(void)
+{
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
+/* USER CODE BEGIN MX_GPIO_Init_1 */
+/* USER CODE END MX_GPIO_Init_1 */
 
-	HAL_NVIC_SetPriority(EXTI9_5_IRQn, 0, 0);
-	HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
+  /* GPIO Ports Clock Enable */
+  __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOB_CLK_ENABLE();
 
-	/* USER CODE BEGIN MX_GPIO_Init_2 */
-	/* USER CODE END MX_GPIO_Init_2 */
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOA, LORA_M0_Pin|LORA_M1_Pin|LAMP2_Pin|LAMP1_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOB, STOP_LED_Pin|GPS_LED_Pin|BUZZER_Pin|DBG_LED_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pins : LORA_M0_Pin LORA_M1_Pin LAMP2_Pin LAMP1_Pin */
+  GPIO_InitStruct.Pin = LORA_M0_Pin|LORA_M1_Pin|LAMP2_Pin|LAMP1_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : LORA_AUX_Pin */
+  GPIO_InitStruct.Pin = LORA_AUX_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(LORA_AUX_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : BTN1_Pin BTN2_Pin BTN3_Pin */
+  GPIO_InitStruct.Pin = BTN1_Pin|BTN2_Pin|BTN3_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : BTN4_Pin BTN5_Pin */
+  GPIO_InitStruct.Pin = BTN4_Pin|BTN5_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : STOP_LED_Pin GPS_LED_Pin BUZZER_Pin DBG_LED_Pin */
+  GPIO_InitStruct.Pin = STOP_LED_Pin|GPS_LED_Pin|BUZZER_Pin|DBG_LED_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : MODE_SLCT_Pin */
+  GPIO_InitStruct.Pin = MODE_SLCT_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(MODE_SLCT_GPIO_Port, &GPIO_InitStruct);
+
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI0_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI0_IRQn);
+
+  HAL_NVIC_SetPriority(EXTI1_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI1_IRQn);
+
+  HAL_NVIC_SetPriority(EXTI9_5_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
+
+/* USER CODE BEGIN MX_GPIO_Init_2 */
+/* USER CODE END MX_GPIO_Init_2 */
 }
 
 /* USER CODE BEGIN 4 */
@@ -1407,32 +1422,32 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 	static uint8_t LoRaChk = 0;
 	static uint16_t LoRaIdx = 0;
 	if (huart->Instance == USART1) {
-		UART1_Rx_End = 0;
-		switch (UART1_Chk) {
-		case 0:
-			if (UART1_Rx_Data[0] == 0x02) {
-				// Rx_Buffer[USART1_len]=UART1_Rx_Data[0];
-				// USART1_len++;
-				UART1_Chk = 1;
-			} else
-				UART1_Chk = 0;
-			break;
-		case 1:
-			if (UART1_Rx_Data[0] == 0x03) {
-				UART1_Rx_End = 1;
-				UART1_Chk = 0;
-			}
-			else {
-				UART1_Rx_Buffer[UART1_Len] = UART1_Rx_Data[0];
-				UART1_Len++;
-			}
-			break;
-		default:
-			UART1_Chk = 0;
-			break;
-		}
-		HAL_UART_Transmit(&huart1, UART1_Rx_Data, 1, 10);
-		HAL_UART_Receive_IT(&huart1, UART1_Rx_Data, 1);
+		UART1_Rx_End = 1;
+//		switch (UART1_Chk) {
+//		case 0:
+//			if (UART1_Rx_Data[0] == 0x02) {
+//				// Rx_Buffer[USART1_len]=UART1_Rx_Data[0];
+//				// USART1_len++;
+//				UART1_Chk = 1;
+//			} else
+//				UART1_Chk = 0;
+//			break;
+//		case 1:
+//			if (UART1_Rx_Data[0] == 0x03) {
+//				UART1_Rx_End = 1;
+//				UART1_Chk = 0;
+//			}
+//			else {
+//				UART1_Rx_Buffer[UART1_Len] = UART1_Rx_Data[0];
+//				UART1_Len++;
+//			}
+//			break;
+//		default:
+//			UART1_Chk = 0;
+//			break;
+//		}
+//		HAL_UART_Transmit(&huart1, UART1_Rx_Data, 1, 10);
+//		HAL_UART_Receive_IT(&huart1, UART1_Rx_Data, 1);
 	} else if (huart->Instance == USART2) {
 		LoRaRxEnd = 1;
 		HAL_UART_Receive_IT(&huart2, LoRaRxData, 10);
@@ -1445,16 +1460,17 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 /* USER CODE END 4 */
 
 /**
- * @brief  This function is executed in case of error occurrence.
- * @retval None
- */
-void Error_Handler(void) {
-	/* USER CODE BEGIN Error_Handler_Debug */
+  * @brief  This function is executed in case of error occurrence.
+  * @retval None
+  */
+void Error_Handler(void)
+{
+  /* USER CODE BEGIN Error_Handler_Debug */
 	/* User can add his own implementation to report the HAL error return state */
 	__disable_irq();
 	while (1) {
 	}
-	/* USER CODE END Error_Handler_Debug */
+  /* USER CODE END Error_Handler_Debug */
 }
 
 #ifdef  USE_FULL_ASSERT
