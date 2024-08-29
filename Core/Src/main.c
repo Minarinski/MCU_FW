@@ -85,7 +85,7 @@ uint8_t NowBusStopFlag = 0;
 uint8_t upDownFlag = 0;
 
 /* USER CODE BEGIN PV */
-#define RxBuffer_SIZE 64  //configure uart receive buffer size
+#define RxBuffer_SIZE 512  //configure uart receive buffer size
 #define DataBuffer_SIZE 512 //gather a few rxBuffer frames before parsing
 
 // Functions for UART receiving, based on the DMA receive function, implementations may vary
@@ -622,7 +622,7 @@ int arsID = 0;
 
 void parseLora(uint8_t *loraData) {
 
-	if (loraData[0] == '0') {
+	if (loraData[1] == '0') {
 		char *token;
 
 		token = strtok(loraData, "@");
@@ -759,7 +759,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
 	HAL_UART_Receive_DMA(&huart1, UART1_Rx_Buffer, 20);
 	HAL_UART_Receive_IT(&huart2, LoRaRxData, 10);
-	HAL_UART_Receive_DMA(&huart3, RxBuffer, RxBuffer_SIZE);
+	HAL_UART_Receive_DMA(&huart3, DataBuffer, RxBuffer_SIZE);
 	setvbuf(stdout, NULL, _IONBF, 0);
 	//	printf("HELL WORLD\r\n");
 	LCD_Init(LCD_ADDR);
