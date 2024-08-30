@@ -670,12 +670,15 @@ void parseLora(uint8_t *loraData) {
 
 }
 
+//LCD=======================================================================
 uint8_t BNumber[8] = { 0x15, 0x1d, 0x17, 0x1d, 0x1, 0x10, 0x1f };
 uint8_t BUp[8] = { 0x4, 0xe, 0x1f, 0x0, 0x4, 0xe, 0x1f };
 uint8_t BDown[8] = { 0x1f, 0xe, 0x4, 0x0, 0x1f, 0xe, 0x4 };
 uint8_t BRight[8] = { 0x10, 0x18, 0x1c, 0x1e, 0x1c, 0x18, 0x10 };
 uint8_t BLeft[8] = { 0x01, 0x03, 0x07, 0x0f, 0x07, 0x03, 0x01 };
 
+
+//UART=======================================================================
 unsigned char UART_Print_Port = 0; //0 = USB, 1 = LoRa, 2 = GPS
 uint8_t UART1_Rx_Data[1];
 
@@ -719,6 +722,8 @@ PUTCHAR_PROTOTYPE {
 	}
 	return ch;
 }
+
+//Tick=================================================================
 uint32_t GPSTick = 0;
 uint32_t LoRaTick = 0;
 uint32_t GPSFIXTick = 0;
