@@ -372,7 +372,11 @@ uint32_t Flash_Write_Data(uint32_t address, uint8_t *StrData) {
 		}
 		dataIdx += 1;
 		if (dataIdx == 2) {
-			updateLCD();
+//			LCD_SendCommand(LCD_ADDR, CMD_LCD_CLEAR); //Clear
+//			LCD_SendCommand(LCD_ADDR, CMD_LCD_CURSOR_LINE_1);
+//			LCD_SendString(LCD_ADDR, "DATA DOWNLOAD");
+//			LCD_SendCommand(LCD_ADDR, CMD_LCD_CURSOR_LINE_2);
+//			LCD_SendString(LCD_ADDR, "SUCCESS");
 		}
 	}
 //	printf("busNM:%s, busRouteNo:%s, BusStopID:%s, lati:%s, longi:%s\r\n",
@@ -447,6 +451,13 @@ void Flash_Clear() {
 	Flash_Erase_Page(0x0800DC00);
 	Flash_Erase_Page(0x0800E000);
 	Flash_Erase_Page(0x0800E400);
+	Flash_Erase_Page(0x0800E800);
+	Flash_Erase_Page(0x0800EC00);
+	Flash_Erase_Page(0x0800F000);
+	Flash_Erase_Page(0x0800F400);
+	Flash_Erase_Page(0x0800F800);
+	Flash_Erase_Page(0x0800FC00);
+
 }
 
 // GPS=======================================================
@@ -471,7 +482,7 @@ double convertToDecimalDegrees(const char *coordinate, char type) {
 		minutes = atof(coordinate + 3); // mm.mmmm
 	} else {
 		printf("Invalid type\n");
-		return;
+		return -1;
 	}
 
 	// ?��?��?�� �???�??? 계산
@@ -812,7 +823,7 @@ int main(void)
 	} else if (InfoModeFlag == 0) {
 		LCD_SendCommand(LCD_ADDR, CMD_LCD_CLEAR); //Clear
 		LCD_SendCommand(LCD_ADDR, CMD_LCD_CURSOR_LINE_1);
-		LCD_SendString(LCD_ADDR, "DATADOWNLOAD");
+		LCD_SendString(LCD_ADDR, "DATA DOWNLOAD");
 		LCD_SendCommand(LCD_ADDR, CMD_LCD_CURSOR_LINE_2);
 		LCD_SendString(LCD_ADDR, "MODE");
 	} else {
@@ -858,16 +869,30 @@ int main(void)
 				if (UART1_Rx_End) {
 					//printf("Echo: %s\r\n", UART1_Rx_Buffer);
 					if (!strncmp(UART1_Rx_Buffer, "Input", 5)) {
+						dataIdx = 0;
+						DataFlashAddress = 0x0800CC00;
 						Flash_Erase_Page(ModeFlashAddress);
 						Flash_Unlock();
 						Flash_Write(ModeFlashAddress, (uint8_t) 0);
 						Flash_Lock();
 						Flash_Clear();
+						InfoModeFlag = 0;
+						LCD_SendCommand(LCD_ADDR, CMD_LCD_CLEAR); //Clear
+						LCD_SendCommand(LCD_ADDR, CMD_LCD_CURSOR_LINE_1);
+						LCD_SendString(LCD_ADDR, "DATA DOWNLOAD");
+						LCD_SendCommand(LCD_ADDR, CMD_LCD_CURSOR_LINE_2);
+						LCD_SendString(LCD_ADDR, "MODE");
 					} else if (!strncmp(UART1_Rx_Buffer, "OutPut", 6)) {
 						Flash_Erase_Page(ModeFlashAddress);
 						Flash_Unlock();
 						Flash_Write(ModeFlashAddress, 1);
 						Flash_Lock();
+						InfoModeFlag = 1;
+						LCD_SendCommand(LCD_ADDR, CMD_LCD_CLEAR); //Clear
+						LCD_SendCommand(LCD_ADDR, CMD_LCD_CURSOR_LINE_1);
+						LCD_SendString(LCD_ADDR, "DATA DOWNLOAD");
+						LCD_SendCommand(LCD_ADDR, CMD_LCD_CURSOR_LINE_2);
+						LCD_SendString(LCD_ADDR, "SUCCESS");
 					} else if ((!strncmp(UART1_Rx_Buffer, "Data", 4)
 							|| !strncmp(UART1_Rx_Buffer, "d", 1))
 							&& InfoModeFlag == 0) {
